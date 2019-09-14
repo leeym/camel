@@ -13,7 +13,7 @@ You can simply write a script with `.pl` extension and invoke it with ["qp0p1"](
 
 # Examples
 * echo.pl - something basic, for example print any parameter
-* inc.pl - with Module(s), probably from CPAN
+* env.pl - with Module(s), probably from CPAN
 * die.pl - simulate if your call `die` in your code, STDOUT will be ignored and STDERR will be returned
 * help.pl - built-in script to list all queries
 * wbsc.pl - a working example to parse the calendar on wbsc.org and create an iCalendar
@@ -54,7 +54,7 @@ Steps to expose Camel in AWS API Gateway
 # Invoke
 * `curl -s -X POST https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
 * `curl -s -X POST -d 'q=echo&p0=foobar' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
-* `curl -s -X POST -d 'q=inc' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
+* `curl -s -X POST -d 'q=env' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
 * `curl -s -X POST -d 'q=wbsc' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
 
 # Errors
