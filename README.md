@@ -6,9 +6,17 @@ It is a remake of [Laputa](https://github.com/leeym/laputa) which is inspired by
 You can simply write a script with `.pl` extension and invoke it with ["qp0p1"](https://image.slidesharecdn.com/20120308wealthfrontsqueryenginesquare-120509010632-phpapp02/95/wealthfronts-query-engine-13-728.jpg?cb=1336526883) serialization, where `q=echo&p0=foo&p1=bar` will call `perl echo.pl foo bar` internally.
 
 # Develop
+* Clone this repository
 * Install Docker
-* Write your own script, for example hello.pl
+* Write your own script, for example `hello.pl`
 * `make build` to create `func.zip` so you can upload it later.
+
+# Examples
+* echo.pl - something basic, for example print any parameter
+* env.pl - with Module(s), probably from CPAN
+* die.pl - simulate if your call `die` in your code, STDOUT will be ignored and STDERR will be returned
+* help.pl - built-in script to list all queries
+* wbsc.pl - a working example to parse the calendar on wbsc.org and create an iCalendar
 
 # Deploy
 The following example is in Oregon (us-west-2) so please replace it with your own region.
@@ -49,7 +57,7 @@ Steps to expose Camel in AWS API Gateway
 * `curl -s -X POST -d 'q=env' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
 * `curl -s -X POST -d 'q=wbsc' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
 
-# Error handling
+# Errors
 * `curl -s -D - -X POST -d 'q=A&q=b' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default` => 400
 * `curl -s -D - -X POST -d 'q=nonexistent' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default` => 404
 * `curl -s -D - -X POST -d 'q=die' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default` => 500
