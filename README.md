@@ -66,10 +66,12 @@ Steps to expose Camel in AWS API Gateway
 `ikq echo foo` will be serialized as `q=echo&p0=foo` and will run `perl echo.pl foo` on AWS Lambda
 
 # Author
-Yen-Ming Lee <leeym@leeym.com>
+Yen-Ming Lee `leeym@leeym.com`
 
 # License
+```
 "THE PEARL-TEA-WARE LICENSE", based on "THE BEER-WARE LICENSE":
 <leeym@leeym.com> wrote this file. As long as you retain this notice you
 can do whatever you want with this stuff. If we meet some day, and you think
 this stuff is worth it, you can buy me a pearl tea in return. Yen-Ming Lee
+```
