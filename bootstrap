@@ -7,17 +7,10 @@ use Capture::Tiny ':all';
 use HTTP::Tiny;
 use JSON::Tiny qw/decode_json encode_json/;
 
+die "$0 only works in AWS Lambda\n" if !$ENV{AWS_LAMBDA_RUNTIME_API};
+
 my $http = HTTP::Tiny->new;
 my $base = "http://$ENV{AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation";
-
-sub request
-{
-  my $url   = shift;
-  my $query = shift;
-  my $res   = $query ? $http->post($url, $query) : $http->get($url);
-  die "$url: $res->{status} $res->{reason}" if !$res->{success};
-  return $res;
-}
 
 while (1)
 {
@@ -28,10 +21,18 @@ while (1)
   request("$base/$req_id/response", { content => encode_json($content) });
 }
 
+sub request
+{
+  my $url   = shift;
+  my $query = shift;
+  my $res   = $query ? $http->post($url, $query) : $http->get($url);
+  die "$url: $res->{status} $res->{reason}" if !$res->{success};
+  return $res;
+}
+
 sub parse
 {
   my $payload = shift;
-  my @ARG;
   my %Q;
   foreach my $pair (split('&', $payload->{'body'}))
   {
@@ -47,10 +48,10 @@ sub discover
   my %Q = @_;
   my @ARG;
   push(@ARG, '/opt/bin/perl');
-  my $script;
   if (!$Q{q}) {
     push(@ARG, 'help.pl');
   } else {
+    my $script;
     if (-f $Q{q}) {
       $script = $Q{q};
     } elsif (-f $Q{q} . '.pl') {
