@@ -1,3 +1,3 @@
 use lib 'local/lib/perl5';
 use Data::Dumper;
-print Dumper(\%ENV);
+print Dumper(\@INC);
