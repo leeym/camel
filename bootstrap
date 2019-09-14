@@ -1,0 +1,121 @@
+#!/opt/bin/perl
+use lib 'local/lib/perl5';
+use strict;
+use warnings;
+use utf8;
+use Capture::Tiny ':all';
+use HTTP::Tiny;
+use JSON::Tiny qw/decode_json encode_json/;
+
+my $http = HTTP::Tiny->new;
+my $base = "http://$ENV{AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation";
+
+sub request
+{
+  my $url   = shift;
+  my $query = shift;
+  my $res   = $query ? $http->post($url, $query) : $http->get($url);
+  die "$url: $res->{status} $res->{reason}" if !$res->{success};
+  return $res;
+}
+
+while (1)
+{
+  my $next   = request("$base/next");
+  my $req_id = $next->{headers}->{'lambda-runtime-aws-request-id'};
+  die 'cannot take the Lambda request ID' if !$req_id;
+  my $content = handle(decode_json($next->{content}));
+  request("$base/$req_id/response", { content => encode_json($content) });
+}
+
+sub parse
+{
+  my $payload = shift;
+  my @ARG;
+  my %Q;
+  foreach my $pair (split('&', $payload->{'body'}))
+  {
+    my ($k, $v) = split('=', $pair);
+    die "Define $k multiple times: [$Q{$k}, $v]\n" if exists($Q{$k});
+    $Q{$k} = $v;
+  }
+  return %Q;
+}
+
+sub discover
+{
+  my %Q = @_;
+  my @ARG;
+  push(@ARG, '/opt/bin/perl');
+  my $script;
+  if (!$Q{q}) {
+    push(@ARG, 'help.pl');
+  } else {
+    if (-f $Q{q}) {
+      $script = $Q{q};
+    } elsif (-f $Q{q} . '.pl') {
+      $script = $Q{q} . '.pl'
+    } else {
+      die "$Q{q} not found\n"
+    }
+    push(@ARG, $script);
+    for (my $i = 0; exists($Q{"p$i"}); $i++)
+    {
+      push(@ARG, $Q{"p$i"});
+    }
+  }
+  return "@ARG";
+}
+
+sub handle
+{
+  my $payload = shift;
+  my $context = shift;
+  my %JSON;
+  $JSON{statusCode}              = 200;
+  $JSON{isBase64Encoded}         = \0;
+  $JSON{headers}{'Content-Type'} = 'text/plain';
+
+  eval {
+    # parse payload and return query hash
+    my %Q;
+    eval { %Q = parse($payload); };
+    if ($@)
+    {
+      $JSON{statusCode} = 400;    # HTTP_BAD_REQUEST
+      $JSON{body}       = $@;
+      return \%JSON;
+    }
+
+    # construct command based on query hash
+    my $cmd;
+    eval { $cmd = discover(%Q); };
+    if ($@)
+    {
+      $JSON{statusCode} = 404;    # HTTP_NOT_FOUND
+      $JSON{body}       = $@;
+      return \%JSON;
+    }
+
+    # execute command and return result
+    my ($stdout, $stderr, $exit) = capture { system($cmd); };
+    if ($exit)
+    {
+      $JSON{statusCode} = 500;       # HTTP_INTERNAL_SERVER_ERROR
+      $JSON{body}       = $stderr;
+    }
+    else
+    {
+      $JSON{statusCode} = 200;       # HTTP_OK
+      $JSON{body}       = $stdout;
+    }
+  };
+  if ($@)
+  {
+    $JSON{statusCode} = 501;         # HTTP_NOT_IMPLEMENTED
+    $JSON{body}       = $@;
+  }
+  return \%JSON;
+}
+
+__END__
