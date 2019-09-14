@@ -1,0 +1,29 @@
+#!/bin/sh
+CURL="curl -s -X POST"
+# uncomment the next line if you want to include the header
+# CURL="$CURL -D -"
+URL="https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default"
+DATA=""
+if [ $# -gt 0 ]; then
+  q=$1
+  shift
+  DATA="q=$q"
+fi
+if [ $# -gt 0 ]; then
+  for i in `seq $#`; do
+    j=$((i-1))
+    p=$1
+    shift
+    DATA="$DATA&p$j="
+    if [ ! "$p" = "_" ]; then
+      DATA="$DATA$p"
+    fi
+  done
+fi
+CMD=$CURL
+if [ ! -z "$DATA" ]; then
+  CMD="$CMD -d $DATA"
+fi
+CMD="$CMD $URL"
+echo "+ $CMD" >& 2
+$CMD
