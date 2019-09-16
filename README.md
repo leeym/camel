@@ -64,9 +64,9 @@ Steps to expose Camel in AWS API Gateway
 * `curl -s -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default?q=wbsc'`
 
 # Errors
-* `curl -s -D - -X POST -d 'q=A&q=b' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default` => 400
-* `curl -s -D - -X POST -d 'q=nonexistent' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default` => 404
-* `curl -s -D - -X POST -d 'q=die' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default` => 500
+* `curl -s -D - -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default?q=A&q=b'` => 400
+* `curl -s -D - -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default?q=what'` => 404
+* `curl -s -D - -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default?q=die'` => 500
 
 # Client
 `ikq echo foo bar` will be serialized as `q=echo&p0=foo&p1=bar` and will run `perl echo.pl foo bar` on AWS Lambda
