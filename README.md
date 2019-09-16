@@ -51,11 +51,17 @@ Steps to expose Camel in AWS API Gateway
    * Deployment stage: New Stage > Stage name: "default" > "Deploy"
 4. Copy the "Invoke URL". In this example it is `https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
 
-# Invoke
+# Invoke (POST)
 * `curl -s -X POST https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
-* `curl -s -X POST -d 'q=echo&p0=foobar' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
+* `curl -s -X POST -d 'q=echo&p0=foo&p1=bar' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
 * `curl -s -X POST -d 'q=env' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
 * `curl -s -X POST -d 'q=wbsc' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
+
+# Invoke (GET)
+* `curl -s -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default'`
+* `curl -s -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default?q=echo&p0=foo&p1=bar'`
+* `curl -s -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default?q=env'`
+* `curl -s -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default?q=wbsc'`
 
 # Errors
 * `curl -s -D - -X POST -d 'q=A&q=b' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default` => 400
@@ -63,7 +69,7 @@ Steps to expose Camel in AWS API Gateway
 * `curl -s -D - -X POST -d 'q=die' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default` => 500
 
 # Client
-`ikq echo foo` will be serialized as `q=echo&p0=foo` and will run `perl echo.pl foo` on AWS Lambda
+`ikq echo foo bar` will be serialized as `q=echo&p0=foo&p1=bar` and will run `perl echo.pl foo bar` on AWS Lambda
 
 # Author
 Yen-Ming Lee `leeym@leeym.com`
