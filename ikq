@@ -1,5 +1,7 @@
 #!/bin/sh
-CURL="curl -s -X POST"
+#METHOD="GET"
+METHOD="POST"
+CURL="curl -s -X $METHOD"
 # uncomment the next line if you want to include the header
 # CURL="$CURL -D -"
 URL="https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default"
@@ -22,7 +24,11 @@ if [ $# -gt 0 ]; then
 fi
 CMD=$CURL
 if [ ! -z "$DATA" ]; then
-  CMD="$CMD -d $DATA"
+  if [ "$METHOD" = "POST" ]; then
+    CMD="$CMD -d $DATA"
+  elif [ "$METHOD" = "GET" ]; then
+    URL="$URL?$DATA"
+  fi
 fi
 CMD="$CMD $URL"
 echo "+ $CMD" >& 2
