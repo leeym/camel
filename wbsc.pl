@@ -7,6 +7,7 @@ use HTTP::Tiny;
 use IO::Socket::SSL;
 use Net::SSLeay;
 use POSIX;
+use JSON::Tiny qw(encode_json decode_json);
 use strict;
 
 my $team = shift || 'TPE';
@@ -43,42 +44,51 @@ foreach my $year ($YEAR - 1 .. $YEAR + 1)
     $html =~ s/&#039;/'/g;
     $html =~ s/\r//g;
     $html =~ s/\n//g;
-    my $title = $1 if $html =~ m{<title>(.*?) - .+</title>};
-    $ENV{TZ} = $1 if $html =~ m{timezone="(.*?)"};
-    my @rows = split('game-row', $html);
-    shift @rows;
+    my @SCRIPT = ($html =~ m{(<script.*?</script>)}g);
 
-    foreach my $row (@rows)
+    foreach my $script (@SCRIPT)
     {
-      my $game = $1 if $row =~ m{>\s*#?(\d+)\s*<};
-      my $ppp  = $1 if ($row =~ m{<div class="col-md-3">(.*?)</div>});
-      die $row if !$ppp;
-      my ($p1, $p2, $p3) = ($ppp =~ m{<p>(.*?)</p>}g);
-      die $ppp if !$p1;
-      my ($dd, $mm, $yyyy, $HH, $MM) = ($1, $2, $3, $4, $5)
-        if $p1 =~ m{(\d{2})/(\d{2})/(\d{4}) (\d{2}):(\d{2})};
-      my $time     = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
-      my $round    = $p2;
-      my $location = $p3;
-      my ($away, $home) = ($row =~ m{>([A-Z]{3})<}g);
-      my @score =
-        ($row =~ m{<span class="(?:away|home)\d+">\s*(\d+)\s*</span>}g);
-      my $score = join(':', @score);
-      $score = 'vs' if $score eq '0:0';
-      my $url = $1 if $row =~ m{"(http://.*?)"};
-      $url =~ s{/en/}{/zh/};
-      next if $away ne $team && $home ne $team;
-      my $event = Data::ICal::Entry::Event->new();
-      $event->add_properties(
-        location    => $location,
-        summary     => "#$game $away $score $home - $title - $round",
-        dtstart     => Date::ICal->new(epoch => $time)->ical,
-        dtend       => Date::ICal->new(epoch => $time + 60 * 60 * 3)->ical,
-        description => $url
-      );
-      $ics->add_entry($event);
+      next if $script !~ m{schedule:};
+      next if $script !~ m{tournament:};
+      my ($s, $t) = (decode_json($1), decode_json($2))
+        if $script =~ m{schedule:\s*({.*?}),\s+tournament:\s*({.*})\s*\};};
+      foreach my $date (keys $s->{games})
+      {
+        foreach my $g (@{ $s->{games}->{$date} })
+        {
+          next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
+          $ENV{TZ} = $g->{start_tz};
+          my $score = "$g->{awayruns}:$g->{homeruns}";
+          $score = 'vs' if $score eq '0:0';
+          my $away    = "$g->{awaylabel}";
+          my $home    = "$g->{homelabel}";
+          my $summary = "#$g->{gamenumber} $away $score $home";
+          $summary .= " - $t->{tournamentname}";
+          $summary .= " - $g->{gametypelabel}";
+          $summary =~ s{Chinese Taipei}{Taiwan};
+          my $boxscore = $event . '/box-score/' . $g->{id};
+          $boxscore =~ s{/en/}{/zh/};
+          my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $g->{start});
+          my $start    = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+          my $duration = $g->{duration} || '3:00';
+          my ($hour, $min) = split(/\D/, $duration);
+          $duration = 'PT' . $hour . 'H' . $min . 'M';
+          my $event = Data::ICal::Entry::Event->new();
+          $event->add_properties(
+            location    => $g->{stadium} . ', ' . $g->{location},
+            summary     => $summary,
+            dtstart     => Date::ICal->new(epoch => $start)->ical,
+            duration    => $duration,
+            description => $boxscore,
+          );
+          $ics->add_entry($event);
+        }
+      }
     }
   }
 }
 
-print $ics->as_string;
+END
+{
+  print $ics->as_string;
+}
