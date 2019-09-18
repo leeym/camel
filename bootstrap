@@ -37,28 +37,31 @@ sub request
 sub parse
 {
   my $payload = shift;
-  my %Q;
+  my %P;
   if ($payload->{httpMethod} eq 'GET')
   {
-    foreach my $k (keys %{ $payload->{multiValueQueryStringParameters} })
-    {
-      my @V = @{ $payload->{multiValueQueryStringParameters}{$k} };
-      die "Define $k multiple times: [@V]\n" if scalar(@V) > 1;
-      $Q{$k} = $V[0];
-    }
+    %P = %{ $payload->{multiValueQueryStringParameters} };
   }
   elsif ($payload->{httpMethod} eq 'POST')
   {
     foreach my $pair (split('&', $payload->{'body'}))
     {
       my ($k, $v) = split('=', $pair);
-      die "Define $k multiple times: [$Q{$k}, $v]\n" if exists($Q{$k});
-      $Q{$k} = $v;
+      push(@{ $P{$k} }, $v);
     }
   }
   else
   {
-    die "Unsupported method: " . $payload->{httpMethod};
+    die 'Unsupported method: ' . $payload->{httpMethod};
+  }
+
+  my %Q;
+  foreach my $k (keys %P)
+  {
+    die "Unknown '$k'\n" if $k ne 'q' && $k !~ m{^p\d+$};
+    my @V = @{ $P{$k} };
+    die "Multiple '$k': ['" . join("', '", @V) . "']\n" if scalar(@V) > 1;
+    $Q{$k} = shift @V;
   }
   return %Q;
 }
