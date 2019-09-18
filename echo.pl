@@ -1,2 +1,1 @@
-my $str = shift;
-print "$str\n";
+print "@ARGV\n";
