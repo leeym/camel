@@ -51,7 +51,7 @@ foreach my $year ($YEAR - 1 .. $YEAR + 1)
       next if $script !~ m{schedule:};
       next if $script !~ m{tournament:};
       my ($s, $t) = (decode_json($1), decode_json($2))
-        if $script =~ m{schedule:\s*({.*?}),\s+tournament:\s*({.*})\s*\};};
+        if $script =~ m{schedule:\s*(\{.*?\}),\s+tournament:\s*(\{.*\})\s*\};};
       foreach my $date (keys $s->{games})
       {
         foreach my $g (@{ $s->{games}->{$date} })
