@@ -69,17 +69,19 @@ foreach my $year ($YEAR - 1 .. $YEAR + 1)
           my $boxscore = $event . '/box-score/' . $g->{id};
           $boxscore =~ s{/en/}{/zh/};
           my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $g->{start});
-          my $start    = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+          my $start = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
           my $duration = $g->{duration} || '3:00';
           my ($hour, $min) = split(/\D/, $duration);
-          $duration = 'PT' . $hour . 'H' . $min . 'M';
+          $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
           my $event = Data::ICal::Entry::Event->new();
           $event->add_properties(
             location    => $g->{stadium} . ', ' . $g->{location},
             summary     => $summary,
             dtstart     => Date::ICal->new(epoch => $start)->ical,
+            dtstamp     => Date::ICal->new(epoch => $start)->ical,
             duration    => $duration,
             description => $boxscore,
+            uid         => $boxscore,
           );
           $ics->add_entry($event);
         }

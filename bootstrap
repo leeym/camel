@@ -40,7 +40,10 @@ sub parse
   my %P;
   if ($payload->{httpMethod} eq 'GET')
   {
-    %P = %{ $payload->{multiValueQueryStringParameters} };
+    if ($payload->{multiValueQueryStringParameters})
+    {
+      %P = %{ $payload->{multiValueQueryStringParameters} };
+    }
   }
   elsif ($payload->{httpMethod} eq 'POST')
   {
