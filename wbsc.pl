@@ -5,9 +5,10 @@ use Data::ICal;
 use Date::ICal;
 use HTTP::Tiny;
 use IO::Socket::SSL;
+use JSON::Tiny qw(encode_json decode_json);
 use Net::SSLeay;
 use POSIX;
-use JSON::Tiny qw(encode_json decode_json);
+use Time::HiRes qw(time);
 use strict;
 
 my $team = shift || 'TPE';
@@ -21,10 +22,12 @@ sub get
 {
   my $url = shift;
   return if $URL{$url};
-  warn "GET $url\n";
   $URL{$url}++;
-  my $res = $http->get($url);
+  my $start   = time;
+  my $res     = $http->get($url);
+  my $elapsed = int((time - $start) * 1000);
   die "$res->{status}: $res->{reason}" if !$res->{success};
+  warn "GET $url ($elapsed ms)\n";
   return $res->{content};
 }
 
