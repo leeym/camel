@@ -28,7 +28,7 @@ sub get
   return $res->{content};
 }
 
-foreach my $year ($YEAR - 1 .. $YEAR + 1)
+foreach my $year ($YEAR .. $YEAR + 1)
 {
   foreach my $event (
     get("$base/events/filter/$year/all") =~ m{href="(.*?)" target="_blank"}g)
