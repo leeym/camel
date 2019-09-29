@@ -143,6 +143,7 @@ sub handle
     {
       $JSON{statusCode} = 200;       # HTTP_OK
       $JSON{body}       = $stdout;
+      warn $stderr if $stderr;
     }
   };
   if ($@)

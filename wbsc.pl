@@ -69,7 +69,7 @@ foreach my $year ($YEAR - 1 .. $YEAR + 1)
           my $boxscore = $event . '/box-score/' . $g->{id};
           $boxscore =~ s{/en/}{/zh/};
           my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $g->{start});
-          my $start = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+          my $start    = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
           my $duration = $g->{duration} || '3:00';
           my ($hour, $min) = split(/\D/, $duration);
           $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
