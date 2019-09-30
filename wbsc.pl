@@ -3,54 +3,38 @@ use lib 'local/lib/perl5';
 use Data::ICal::Entry::Event;
 use Data::ICal;
 use Date::ICal;
+use HTTP::Tiny;
 use IO::Socket::SSL;
 use JSON::Tiny qw(encode_json decode_json);
 use Net::SSLeay;
 use POSIX;
-use LWP::Parallel::UserAgent;
-use LWP::Simple;
+use Time::HiRes qw(time);
 use strict;
 
 my $team = shift || 'TPE';
 my $ics  = new Data::ICal;
+my $http = new HTTP::Tiny;
 my $base = 'http://www.wbsc.org';
 my $YEAR = (localtime)[5] + 1900;
 my %URL;
 
-END
+sub get
 {
-  print $ics->as_string;
+  my $url = shift;
+  return if $URL{$url};
+  $URL{$url}++;
+  my $start   = time;
+  my $res     = $http->get($url);
+  my $elapsed = int((time - $start) * 1000);
+  die "$res->{status}: $res->{reason}" if !$res->{success};
+  warn "GET $url ($elapsed ms)\n";
+  return $res->{content};
 }
 
-my $pua = new LWP::Parallel::UserAgent;
-foreach my $year ($YEAR - 1 .. $YEAR + 1)
+foreach my $year ($YEAR .. $YEAR + 1)
 {
-  $pua->register(HTTP::Request->new('GET', "$base/events/filter/$year/all"));
-}
-foreach my $entry (values %{ $pua->wait })
-{
-  die unless $entry->response->is_success;
-  events($entry->request->url, $entry->response->content);
-  $pua->discard_entry($entry);
-}
-foreach my $entry (values %{ $pua->wait })
-{
-  next unless $entry->response->is_success;
-  event($entry->request->url, $entry->response->content);
-  $pua->discard_entry($entry);
-}
-foreach my $entry (@{ $pua->{ordpend_connections} })
-{
-  event($entry->request->url, get($entry->request->url));
-}
-
-sub events
-{
-  my $url  = shift;
-  my $year = $1 if $url =~ m{/filter/(\d+)/all};
-  my $html = shift;
-  warn "GET $url\n";
-  foreach my $event ($html =~ m{href="(.*?)" target="_blank"}g)
+  foreach my $event (
+    get("$base/events/filter/$year/all") =~ m{href="(.*?)" target="_blank"}g)
   {
     next if $event !~ m{wbsc.org};
     next if $event =~ m{edition};
@@ -58,57 +42,58 @@ sub events
     next if $event =~ m{baseball5};
     $event .= "/en/$year" if $event !~ m{$year};
     $event .= '/schedule-and-results';
-    $pua->register(HTTP::Request->new('GET', $event));
-  }
-}
+    my $html = get($event);
+    next if !$html;
+    $html =~ s/&#039;/'/g;
+    $html =~ s/\r//g;
+    $html =~ s/\n//g;
+    my @SCRIPT = ($html =~ m{(<script.*?</script>)}g);
 
-sub event
-{
-  my $url  = shift;
-  my $html = shift;
-  warn "GET $url\n";
-  $html =~ s/&#039;/'/g;
-  $html =~ s/\r//g;
-  $html =~ s/\n//g;
-  foreach my $script ($html =~ m{(<script.*?</script>)}g)
-  {
-    next if $script !~ m{schedule:};
-    next if $script !~ m{tournament:};
-    my ($s, $t) = (decode_json($1), decode_json($2))
-      if $script =~ m{schedule:\s*(\{.*?\}),\s+tournament:\s*(\{.*\})\s*\};};
-    foreach my $date (keys %{ $s->{games} })
+    foreach my $script (@SCRIPT)
     {
-      foreach my $g (@{ $s->{games}->{$date} })
+      next if $script !~ m{schedule:};
+      next if $script !~ m{tournament:};
+      my ($s, $t) = (decode_json($1), decode_json($2))
+        if $script =~ m{schedule:\s*(\{.*?\}),\s+tournament:\s*(\{.*\})\s*\};};
+      foreach my $date (keys %{ $s->{games} })
       {
-        next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
-        $ENV{TZ} = $g->{start_tz};
-        my $score = "$g->{awayruns}:$g->{homeruns}";
-        $score = 'vs' if $score eq '0:0';
-        my $away    = "$g->{awaylabel}";
-        my $home    = "$g->{homelabel}";
-        my $summary = "#$g->{gamenumber} $away $score $home";
-        $summary .= " - $t->{tournamentname}";
-        $summary .= " - $g->{gametypelabel}";
-        $summary =~ s{Chinese Taipei}{Taiwan};
-        my $boxscore = $url . '/box-score/' . $g->{id};
-        $boxscore =~ s{/en/}{/zh/};
-        my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $g->{start});
-        my $start = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
-        my $duration = $g->{duration} || '3:00';
-        my ($hour, $min) = split(/\D/, $duration);
-        $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
-        my $event = Data::ICal::Entry::Event->new();
-        $event->add_properties(
-          location    => $g->{stadium} . ', ' . $g->{location},
-          summary     => $summary,
-          dtstart     => Date::ICal->new(epoch => $start)->ical,
-          dtstamp     => Date::ICal->new(epoch => $start)->ical,
-          duration    => $duration,
-          description => $boxscore,
-          uid         => $boxscore,
-        );
-        $ics->add_entry($event);
+        foreach my $g (@{ $s->{games}->{$date} })
+        {
+          next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
+          $ENV{TZ} = $g->{start_tz};
+          my $score = "$g->{awayruns}:$g->{homeruns}";
+          $score = 'vs' if $score eq '0:0';
+          my $away    = "$g->{awaylabel}";
+          my $home    = "$g->{homelabel}";
+          my $summary = "#$g->{gamenumber} $away $score $home";
+          $summary .= " - $t->{tournamentname}";
+          $summary .= " - $g->{gametypelabel}";
+          $summary =~ s{Chinese Taipei}{Taiwan};
+          my $boxscore = $event . '/box-score/' . $g->{id};
+          $boxscore =~ s{/en/}{/zh/};
+          my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $g->{start});
+          my $start    = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+          my $duration = $g->{duration} || '3:00';
+          my ($hour, $min) = split(/\D/, $duration);
+          $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
+          my $event = Data::ICal::Entry::Event->new();
+          $event->add_properties(
+            location    => $g->{stadium} . ', ' . $g->{location},
+            summary     => $summary,
+            dtstart     => Date::ICal->new(epoch => $start)->ical,
+            dtstamp     => Date::ICal->new(epoch => $start)->ical,
+            duration    => $duration,
+            description => $boxscore,
+            uid         => $boxscore,
+          );
+          $ics->add_entry($event);
+        }
       }
     }
   }
+}
+
+END
+{
+  print $ics->as_string;
 }
