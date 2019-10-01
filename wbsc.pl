@@ -1,5 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
+use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
 use Date::ICal;
@@ -31,6 +32,30 @@ sub get
   return $res->{content};
 }
 
+sub mmdd
+{
+  my ($dd, $mm, $yy) = split('/', shift);
+  return "$yy-$mm-$dd";
+}
+
+sub tz
+{
+  my $g = shift;
+  my $t = shift;
+  return $g->{start_tz} if $g->{start_tz};
+  foreach my $venue (@{ $t->{venues} })
+  {
+    next if $venue->{id} != $g->{venueid};
+    if ($venue->{info})
+    {
+      return decode_json($venue->{info})->{timezone}->{timezone};
+    }
+    return 'Asia/Taipei' if $venue->{country} eq 'TPE';
+    die Dumper($venue);
+  }
+  die Dumper($g);
+}
+
 foreach my $year ($YEAR .. $YEAR + 1)
 {
   foreach my $event (
@@ -55,12 +80,12 @@ foreach my $year ($YEAR .. $YEAR + 1)
       next if $script !~ m{tournament:};
       my ($s, $t) = (decode_json($1), decode_json($2))
         if $script =~ m{schedule:\s*(\{.*?\}),\s+tournament:\s*(\{.*\})\s*\};};
-      foreach my $date (keys %{ $s->{games} })
+      foreach my $date (sort { mmdd($a) cmp mmdd($b) } keys %{ $s->{games} })
       {
         foreach my $g (@{ $s->{games}->{$date} })
         {
           next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
-          $ENV{TZ} = $g->{start_tz};
+          $ENV{TZ} = tz($g, $t);
           my $score = "$g->{awayruns}:$g->{homeruns}";
           $score = 'vs' if $score eq '0:0';
           my $away    = "$g->{awaylabel}";
@@ -69,10 +94,11 @@ foreach my $year ($YEAR .. $YEAR + 1)
           $summary .= " - $t->{tournamentname}";
           $summary .= " - $g->{gametypelabel}";
           $summary =~ s{Chinese Taipei}{Taiwan};
+          warn $g->{start} . ' (' . $ENV{TZ} . ') ' . $summary . "\n";
           my $boxscore = $event . '/box-score/' . $g->{id};
           $boxscore =~ s{/en/}{/zh/};
           my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $g->{start});
-          my $start = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+          my $start    = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
           my $duration = $g->{duration} || '3:00';
           my ($hour, $min) = split(/\D/, $duration);
           $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
