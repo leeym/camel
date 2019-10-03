@@ -119,13 +119,14 @@ foreach my $year ($YEAR .. $YEAR + 1)
           $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
           my $event = Data::ICal::Entry::Event->new();
           $event->add_properties(
-            location    => $g->{stadium} . ', ' . $g->{location},
-            summary     => $summary,
-            dtstart     => Date::ICal->new(epoch => $start)->ical,
-            dtstamp     => Date::ICal->new(epoch => $start)->ical,
-            duration    => $duration,
-            description => $boxscore,
-            uid         => $boxscore,
+            description     => $boxscore,
+            dtstamp         => Date::ICal->new(epoch => $start)->ical,
+            duration        => $duration,
+            'last-modified' => Date::ICal->new->ical,
+            location        => $g->{stadium} . ', ' . $g->{location},
+            summary         => $summary,
+            uid             => $g->{id},
+            url             => $boxscore,
           );
           $ics->add_entry($event);
         }

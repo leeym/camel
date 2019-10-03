@@ -151,12 +151,13 @@ GET "$base/calendar", sub {
                 my $vevent = Data::ICal::Entry::Event->new();
                 $vevent->add_properties(
                   description => $boxscore,
-                  dtstamp     => Date::ICal->new(epoch => $start)->ical,
-                  dtstart  => Date::ICal->new(epoch => $start)->ical,
-                  duration => $duration,
-                  location => $g->{stadium} . ', ' . $g->{location},
-                  summary  => $summary,
-                  uid      => $boxscore,
+                  dtstart         => Date::ICal->new(epoch => $start)->ical,
+                  duration        => $duration,
+                  'last-modified' => Date::ICal->new->ical,
+                  location        => $g->{stadium} . ', ' . $g->{location},
+                  summary         => $summary,
+                  uid             => $g->{id},
+                  url             => $boxscore,
                 );
                 push(@VEVENT, $vevent);
               }
