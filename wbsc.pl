@@ -120,7 +120,7 @@ foreach my $year ($YEAR .. $YEAR + 1)
           my $event = Data::ICal::Entry::Event->new();
           $event->add_properties(
             description     => $boxscore,
-            dtstamp         => Date::ICal->new(epoch => $start)->ical,
+            dtstart         => Date::ICal->new(epoch => $start)->ical,
             duration        => $duration,
             'last-modified' => Date::ICal->new->ical,
             location        => $g->{stadium} . ', ' . $g->{location},
