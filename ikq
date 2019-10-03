@@ -1,6 +1,6 @@
 #!/bin/sh
-#METHOD="GET"
-METHOD="POST"
+METHOD="GET"
+#METHOD="POST"
 CURL="curl -s -X $METHOD"
 # uncomment the next line if you want to include the header
 # CURL="$CURL -D -"

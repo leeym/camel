@@ -43,17 +43,32 @@ sub tz
   my $g = shift;
   my $t = shift;
   return $g->{start_tz} if $g->{start_tz};
+  my $country = '';
+  $country = $1 if ($g->{location} =~ m{\(([A-Z]{3})\)});
   foreach my $venue (@{ $t->{venues} })
   {
     next if $venue->{id} != $g->{venueid};
-    if ($venue->{info})
-    {
-      return decode_json($venue->{info})->{timezone}->{timezone};
-    }
-    return 'Asia/Taipei' if $venue->{country} eq 'TPE';
-    die Dumper($venue);
+    return decode_json($venue->{info})->{timezone}->{timezone}
+      if $venue->{info};
+    $country = $venue->{country} if $venue->{country};
   }
-  die Dumper($g);
+  if (!$country)
+  {
+    my @COUNTRIES = keys(%{ $t->{hostinfo} });
+    $country = shift @COUNTRIES if scalar(@COUNTRIES) == 1;
+  }
+  if ($country && $t->{hostinfo}->{$country})
+  {
+    return $t->{hostinfo}->{$country}->{timezone};
+  }
+  warn 'G:' . Dumper($g);
+  warn 'T:' . Dumper($t);
+  die 'Unable to determine timezone for venueid:'
+    . $g->{venueid}
+    . ' location:'
+    . $g->{location}
+    . ' country:'
+    . $country;
 }
 
 foreach my $year ($YEAR .. $YEAR + 1)
@@ -98,7 +113,7 @@ foreach my $year ($YEAR .. $YEAR + 1)
           my $boxscore = $event . '/box-score/' . $g->{id};
           $boxscore =~ s{/en/}{/zh/};
           my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $g->{start});
-          my $start    = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+          my $start = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
           my $duration = $g->{duration} || '3:00';
           my ($hour, $min) = split(/\D/, $duration);
           $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';

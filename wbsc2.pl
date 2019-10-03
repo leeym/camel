@@ -1,6 +1,7 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
 use AnyEvent::HTTP;
+use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
 use Date::ICal;
@@ -34,6 +35,39 @@ sub value
   my $vevent = shift;
   my $field  = shift;
   return $vevent->{properties}->{$field}[0]->{value};
+}
+
+sub tz
+{
+  my $g = shift;
+  my $t = shift;
+  return $g->{start_tz} if $g->{start_tz};
+  my $country = '';
+  $country = $1 if ($g->{location} =~ m{\(([A-Z]{3})\)});
+  foreach my $venue (@{ $t->{venues} })
+  {
+    next if $venue->{id} != $g->{venueid};
+    return decode_json($venue->{info})->{timezone}->{timezone}
+      if $venue->{info};
+    $country = $venue->{country} if $venue->{country};
+  }
+  if (!$country)
+  {
+    my @COUNTRIES = keys(%{ $t->{hostinfo} });
+    $country = shift @COUNTRIES if scalar(@COUNTRIES) == 1;
+  }
+  if ($country && $t->{hostinfo}->{$country})
+  {
+    return $t->{hostinfo}->{$country}->{timezone};
+  }
+  warn 'G:' . Dumper($g);
+  warn 'T:' . Dumper($t);
+  die 'Unable to determine timezone for venueid:'
+    . $g->{venueid}
+    . ' location:'
+    . $g->{location}
+    . ' country:'
+    . $country;
 }
 
 sub GET
@@ -105,12 +139,12 @@ GET "$base/calendar", sub {
                 $summary .= " - $g->{gametypelabel}";
                 $summary =~ s{Chinese Taipei}{Taiwan};
                 next if $summary !~ m{Taiwan};
-                warn sprintf("%s/%s: %s\n", $year, mmdd($ddmm), $summary);
                 my $boxscore = $url . '/box-score/' . $g->{id};
                 $boxscore =~ s{/en/}{/zh/};
                 my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $g->{start});
-                $ENV{TZ} = $g->{start_tz};
+                $ENV{TZ} = tz($g, $t);
                 my $start = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+                warn sprintf("%s (%s): %s\n", $g->{start}, $ENV{TZ}, $summary);
                 my $duration = $g->{duration} || '3:00';
                 my ($hour, $min) = split(/\D/, $duration);
                 $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
