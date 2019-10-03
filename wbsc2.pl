@@ -7,7 +7,7 @@ use Data::ICal;
 use Date::ICal;
 use EV;
 use JSON::Tiny qw(decode_json);
-use POSIX qw(mktime);
+use POSIX qw(mktime strftime);
 use Time::HiRes qw(time);
 use strict;
 
@@ -150,10 +150,10 @@ GET "$base/calendar", sub {
                 $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
                 my $vevent = Data::ICal::Entry::Event->new();
                 $vevent->add_properties(
-                  description => $boxscore,
+                  description => "$boxscore\n" . strftime('%FT%T', gmtime),
                   dtstart         => Date::ICal->new(epoch => $start)->ical,
                   duration        => $duration,
-                  'last-modified' => Date::ICal->new->ical,
+                  'last-modified' => Date::ICal->new(epoch => time)->ical,
                   location        => $g->{stadium} . ', ' . $g->{location},
                   summary         => $summary,
                   uid             => $g->{id},

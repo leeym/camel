@@ -8,7 +8,7 @@ use HTTP::Tiny;
 use IO::Socket::SSL;
 use JSON::Tiny qw(encode_json decode_json);
 use Net::SSLeay;
-use POSIX;
+use POSIX qw(mktime strftime);
 use Time::HiRes qw(time);
 use strict;
 
@@ -117,18 +117,18 @@ foreach my $year ($YEAR .. $YEAR + 1)
           my $duration = $g->{duration} || '3:00';
           my ($hour, $min) = split(/\D/, $duration);
           $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
-          my $event = Data::ICal::Entry::Event->new();
-          $event->add_properties(
-            description     => $boxscore,
+          my $vevent = Data::ICal::Entry::Event->new();
+          $vevent->add_properties(
+            description     => "$boxscore\n" . strftime('%FT%T%z', gmtime),
             dtstart         => Date::ICal->new(epoch => $start)->ical,
             duration        => $duration,
-            'last-modified' => Date::ICal->new->ical,
+            'last-modified' => Date::ICal->new(epoch => time)->ical,
             location        => $g->{stadium} . ', ' . $g->{location},
             summary         => $summary,
             uid             => $g->{id},
             url             => $boxscore,
           );
-          $ics->add_entry($event);
+          $ics->add_entry($vevent);
         }
       }
     }
