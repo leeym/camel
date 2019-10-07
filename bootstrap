@@ -135,6 +135,7 @@ sub handle
     }
 
     # execute command and return result
+    warn "COMMAND: $cmd\n";
     my ($stdout, $stderr, $exit) = capture { system($cmd); };
     if ($exit)
     {
