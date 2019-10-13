@@ -20,11 +20,6 @@ my $base = 'http://www.baseballasia.org';
 my $YEAR = (localtime)[5] + 1900;
 my %URL;
 
-END
-{
-  print $ics->as_string;
-}
-
 sub get
 {
   my $url = shift;
@@ -36,6 +31,23 @@ sub get
   die "$res->{status}: $res->{reason}" if !$res->{success};
   warn "GET $url ($elapsed ms)\n";
   return $res->{content};
+}
+
+sub tz
+{
+  my $host = shift;
+  return 'Asia/Taipei'    if $host =~ m{Taichung}i;
+  return 'Asia/Taipei'    if $host =~ m{Taipei}i;
+  return 'Asia/Manila'    if $host =~ m{Philippines}i;
+  return 'Asia/Bangkok'   if $host =~ m{Thailand}i;
+  return 'Asia/Seoul'     if $host =~ m{Korea}i;
+  return 'Asia/Tokyo'     if $host =~ m{Japan}i;
+  return 'Asia/Shanghai'  if $host =~ m{China}i;
+  return 'Asia/Shanghai'  if $host =~ m{2019 X BFA U15 Baseball Championship}i;
+  return 'Asia/Taipei'    if $host =~ m{2019 XXIX Asian Baseball Championship}i;
+  return 'Asia/Hong_Kong' if $host =~ m{Hong Kong}i;
+  return 'Asia/Jakarta'   if $host =~ m{Jakarta}i;
+  die "Cannot determine TZ based on $host";
 }
 
 my @EVENT;
@@ -52,20 +64,26 @@ while (scalar(@EVENT))
   my $html  = get($event);
   $html =~ s{\r}{}g;
   $html =~ s{\n}{}g;
+  next if $html !~ m{Chinese Taipei};
+  my $host = $1 if $html =~ m{<div.*?resault-page(.*?)</div>};
+  $ENV{TZ} = tz($host);
   foreach my $tr ($html =~ m{(<tr>.*?</tr>)}g)
   {
     $tr =~ s{<!--.*?-->}{};
-    my @TD    = ($tr =~ m{<td>\s*(.*?)\s*</td>}g);
-    my $game  = shift @TD;
-    my $time  = shift @TD;
+    my @TD = ($tr =~ m{<td>\s*(.*?)\s*</td>}g);
+    next if !scalar(@TD);
+    my $game = shift @TD;
+    my $time = shift @TD;
+    $time =~ s{ , ([A-Z][a-z][a-z])([a-z]*)}{, $1};
     my $start = parsedate($time);
+    die "Cannot parse $time\n" if !$start;
     my $home  = shift @TD;
     my $away  = shift @TD;
     my $park  = shift @TD;
     my $score = shift @TD;
     $score = 'vs' if !$score;
     my $boxscore = shift @TD;
-    my $url      = $boxscore || $event;
+    my $url      = $event;
     my $duration = 'PT3H0M';
     my $summary  = "$home $score $away";
     $summary =~ s{Chinese Taipei}{Taiwan};
@@ -83,3 +101,5 @@ while (scalar(@EVENT))
     $ics->add_entry($vevent);
   }
 }
+
+print $ics->as_string;
