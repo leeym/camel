@@ -75,6 +75,7 @@ while (scalar(@EVENT))
     my $game = shift @TD;
     my $time = shift @TD;
     $time =~ s{ , ([A-Z][a-z][a-z])([a-z]*)}{, $1};
+    $time =~ s{ [ap]m$}{};
     my $start = parsedate($time);
     die "Cannot parse $time\n" if !$start;
     my $home  = shift @TD;
@@ -88,9 +89,10 @@ while (scalar(@EVENT))
     my $summary  = "$home $score $away";
     $summary =~ s{Chinese Taipei}{Taiwan};
     next if $summary !~ m{Taiwan};
+    warn strftime('%F %T %z', localtime($start)) . ": $summary\n";
     my $vevent = Data::ICal::Entry::Event->new();
     $vevent->add_properties(
-      description     => "$url\n" . strftime('%FT%T%z', gmtime),
+      description     => "$url\n" . strftime('%F %T %z', gmtime),
       dtstart         => Date::ICal->new(epoch => $start)->ical,
       duration        => $duration,
       'last-modified' => Date::ICal->new(epoch => time)->ical,
