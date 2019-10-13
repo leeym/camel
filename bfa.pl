@@ -65,8 +65,10 @@ while (scalar(@EVENT))
   $html =~ s{\r}{}g;
   $html =~ s{\n}{}g;
   next if $html !~ m{Chinese Taipei};
-  my $host = $1 if $html =~ m{<div.*?resault-page(.*?)</div>};
+  my $host       = $1 if $html =~ m{<div.*?resault-page(.*?)</div>};
+  my $tournament = $1 if $host =~ m{<b>(.*?)(\s*\(.*?\))?</b>};
   $ENV{TZ} = tz($host);
+
   foreach my $tr ($html =~ m{(<tr>.*?</tr>)}g)
   {
     $tr =~ s{<!--.*?-->}{};
@@ -86,7 +88,7 @@ while (scalar(@EVENT))
     my $boxscore = shift @TD;
     my $url      = $event;
     my $duration = 'PT3H0M';
-    my $summary  = "$home $score $away";
+    my $summary  = "#$game $home $score $away - $tournament";
     $summary =~ s{Chinese Taipei}{Taiwan};
     next if $summary !~ m{Taiwan};
     warn strftime('%F %T %z', localtime($start)) . ": $summary\n";
