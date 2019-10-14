@@ -5,19 +5,14 @@ use Data::ICal::Entry::Event;
 use Data::ICal;
 use Date::ICal;
 use HTTP::Tiny;
-use IO::Socket::SSL;
-use JSON::Tiny qw(encode_json decode_json);
-use Net::SSLeay;
-use POSIX qw(mktime strftime);
+use POSIX qw(strftime);
 use Time::HiRes qw(time);
-use Time::ParseDate;
+use Time::ParseDate qw(parsedate);
 use strict;
 
-my $team = shift || 'TPE';
 my $ics  = new Data::ICal;
 my $http = new HTTP::Tiny;
-my $base = 'http://www.baseballasia.org';
-my $YEAR = (localtime)[5] + 1900;
+my $base = 'http://www.baseballasia.org/BFA/include';
 my %URL;
 
 sub get
@@ -51,7 +46,7 @@ sub tz
 }
 
 my @EVENT;
-my $events = "$base/BFA/include/index.php?Page=1-2";
+my $events = "$base/index.php?Page=1-2";
 foreach my $score01 (get($events) =~ m{score01=(\w+)}g)
 {
   # unshift(@EVENT, "$events-1&score01=$score01");
@@ -78,15 +73,12 @@ while (scalar(@EVENT))
     my $time = shift @TD;
     $time =~ s{ , ([A-Z][a-z][a-z])([a-z]*)}{, $1};
     $time =~ s{ [ap]m$}{};
-    my $start = parsedate($time);
-    die "Cannot parse $time\n" if !$start;
-    my $home  = shift @TD;
-    my $away  = shift @TD;
-    my $park  = shift @TD;
-    my $score = shift @TD;
-    $score = 'vs' if !$score;
-    my $boxscore = shift @TD;
-    my $url      = $event;
+    my $start    = parsedate($time) || die "Cannot parse $time\n";
+    my $home     = shift @TD;
+    my $away     = shift @TD;
+    my $park     = shift @TD;
+    my $score    = shift @TD || 'vs';
+    my $url      = ((shift @TD) =~ m{a href="([^"]+)"}) ? "$base/$1" : $event;
     my $duration = 'PT3H0M';
     my $summary  = "#$game $home $score $away - $tournament";
     $summary =~ s{Chinese Taipei}{Taiwan};
