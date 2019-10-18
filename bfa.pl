@@ -77,11 +77,11 @@ while (scalar(@EVENT))
     my $home     = shift @TD;
     my $away     = shift @TD;
     my $park     = shift @TD;
-    my $score    = shift @TD || 'vs';
+    my $score    = join(':', reverse(split(/\D+/, shift @TD))) || 'vs';
     my $boxscore = shift @TD;
     my $url      = $event;
     my $duration = 'PT3H0M';
-    my $summary  = "#$game $home $score $away - $tournament";
+    my $summary  = "#$game $away $score $home - $tournament";
     $summary =~ s{Chinese Taipei}{Taiwan};
     next if $summary !~ m{Taiwan};
     warn strftime('%F %T %z', localtime($start)) . ": $summary\n";
