@@ -78,7 +78,8 @@ while (scalar(@EVENT))
     my $away     = shift @TD;
     my $park     = shift @TD;
     my $score    = shift @TD || 'vs';
-    my $url      = ((shift @TD) =~ m{a href="([^"]+)"}) ? "$base/$1" : $event;
+    my $boxscore = shift @TD;
+    my $url      = $event;
     my $duration = 'PT3H0M';
     my $summary  = "#$game $home $score $away - $tournament";
     $summary =~ s{Chinese Taipei}{Taiwan};
