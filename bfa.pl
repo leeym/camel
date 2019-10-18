@@ -45,6 +45,17 @@ sub tz
   die "Cannot determine TZ based on $host";
 }
 
+sub validate
+{
+  my ($t, $g, $home, $h, $away, $a) = @_;
+  return if $h == $a;
+  my $winner = ($h > $a) ? $home : $away;
+  my $loser  = ($h < $a) ? $home : $away;
+  return ($a, $h) if $t eq '2019 X BFA U15 Baseball Championship' && $g == 13;
+  die "$t $g" if $loser eq 'Taiwan' && $winner !~ m{(Japan|Korea)};
+  return ($h, $a);
+}
+
 my @EVENT;
 my $events = "$base/index.php?Page=1-2";
 foreach my $score01 (get($events) =~ m{score01=(\w+)}g)
@@ -73,16 +84,19 @@ while (scalar(@EVENT))
     my $time = shift @TD;
     $time =~ s{ , ([A-Z][a-z][a-z])([a-z]*)}{, $1};
     $time =~ s{ [ap]m$}{};
-    my $start    = parsedate($time) || die "Cannot parse $time\n";
-    my $home     = shift @TD;
-    my $away     = shift @TD;
-    my $park     = shift @TD;
-    my $score    = join(':', reverse(split(/\D+/, shift @TD))) || 'vs';
+    my $start = parsedate($time) || die "Cannot parse $time\n";
+    my $home = shift @TD;
+    $home =~ s{Chinese Taipei}{Taiwan};
+    my $away = shift @TD;
+    $away =~ s{Chinese Taipei}{Taiwan};
+    my $park = shift @TD;
+    my ($h, $a) = split(/\D+/, (shift @TD));
+    my $score = ($h > 0 || $a > 0) ? "$a : $h" : 'vs';
+    ($h, $a) = validate($tournament, $game, $home, $h, $away, $a);
     my $boxscore = shift @TD;
     my $url      = $event;
     my $duration = 'PT3H0M';
     my $summary  = "#$game $away $score $home - $tournament";
-    $summary =~ s{Chinese Taipei}{Taiwan};
     next if $summary !~ m{Taiwan};
     warn strftime('%F %T %z', localtime($start)) . ": $summary\n";
     my $vevent = Data::ICal::Entry::Event->new();
