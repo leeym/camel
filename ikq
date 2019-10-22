@@ -3,7 +3,7 @@ METHOD="GET"
 #METHOD="POST"
 CURL="curl -s -X $METHOD"
 # uncomment the next line if you want to include the header
-# CURL="$CURL -D -"
+CURL="$CURL -D -"
 URL="https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default"
 DATA=""
 if [ $# -gt 0 ]; then
