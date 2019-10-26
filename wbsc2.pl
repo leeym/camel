@@ -12,7 +12,7 @@ use Time::HiRes qw(time);
 use strict;
 
 my $ics  = new Data::ICal;
-my $base = 'http://www.wbsc.org';
+my $base = 'https://www.wbsc.org';
 my $YEAR = (localtime)[5] + 1900;
 my $counter;
 my @VEVENT;
@@ -41,7 +41,7 @@ sub tz
 {
   my $g = shift;
   my $t = shift;
-  return $g->{start_tz} if $g->{start_tz};
+  return $g->{timezone} if $g->{timezone};
   my $country = '';
   $country = $1 if ($g->{location} =~ m{\(([A-Z]{3})\)});
   foreach my $venue (@{ $t->{venues} })
@@ -60,6 +60,7 @@ sub tz
   {
     return $t->{hostinfo}->{$country}->{timezone};
   }
+  return 'Asia/Taipei' if $g->{location} =~ m{Taichung};
   warn 'G:' . Dumper($g);
   warn 'T:' . Dumper($t);
   die 'Unable to determine timezone for venueid:'
@@ -78,7 +79,11 @@ sub GET
   $T{$url} = time;
   $T{ $url . '/' } = time;
   warn "=> GET $url\n";
-  http_get $url, $cb;
+  my %headers;
+  $headers{Accept} = 'application/vnd.wbsc_tournaments.v1+json';
+  http_get $url,
+    headers => \%headers,
+    $cb;
 }
 
 sub elapsed
@@ -94,9 +99,9 @@ GET "$base/calendar", sub {
   my $hdr  = shift;
   my $url  = $hdr->{URL};
   warn "<= GET $url (" . elapsed($url) . " ms)\n";
-  foreach my $events ($body =~ m{"(/events/filter/\d+/all)">\d+<}g)
+  foreach my $events ($body =~ m{"(https://www.wbsc.org/calendar/\d+)">\d+}g)
   {
-    GET "$base$events", sub {
+    GET $events, sub {
       my $body = shift;
       my $hdr  = shift;
       my $url  = $hdr->{URL};
@@ -108,6 +113,8 @@ GET "$base/calendar", sub {
         next if $event =~ m{edition};
         next if $event =~ m{congress};
         next if $event =~ m{baseball5};
+        next if $event =~ m{ranking};
+        next if $event =~ m{document};
         $event .= "/en/$year" if $event !~ m{$year};
         $event .= '/schedule-and-results';
         GET "$event", sub {
@@ -120,23 +127,23 @@ GET "$base/calendar", sub {
           $body =~ s/\n//g;
           foreach my $script ($body =~ m{(<script.*?</script>)}g)
           {
-            next if $script !~ m{schedule:};
             next if $script !~ m{tournament:};
-            my ($s, $t) = (decode_json($1), decode_json($2))
-              if $script =~
-              m{schedule:\s*(\{.*?\}),\s+tournament:\s*(\{.*\})\s*\};};
-            foreach
-              my $ddmm (sort { mmdd($a) cmp mmdd($b) } keys %{ $s->{games} })
-            {
-              foreach my $g (@{ $s->{games}->{$ddmm} })
+            my $t = decode_json($1)
+              if $script =~ m{tournament:\s*(\{.*\})\s*\};};
+            my $id = $t->{id};
+            GET "https://api.wbsc.org/api/tournaments/$id/schedules?", sub {
+              my $body = shift;
+              my $hdr  = shift;
+              my $url  = $hdr->{URL};
+              my $s    = decode_json($body);
+              foreach my $g (@{ $s->{data} })
               {
-                my $score = "$g->{awayruns}:$g->{homeruns}";
+                my $score = $g->{away}->{runs} . ':' . $g->{home}->{runs};
                 $score = 'vs' if $score eq '0:0';
-                my $away    = "$g->{awaylabel}";
-                my $home    = "$g->{homelabel}";
-                my $summary = "#$g->{gamenumber} $away $score $home";
+                my $away    = $g->{away}->{label};
+                my $home    = $g->{home}->{label};
+                my $summary = "$away $score $home";
                 $summary .= " - $t->{tournamentname}";
-                $summary .= " - $g->{gametypelabel}";
                 $summary =~ s{Chinese Taipei}{Taiwan};
                 next if $summary !~ m{Taiwan};
                 my $boxscore = $url . '/box-score/' . $g->{id};
@@ -150,7 +157,9 @@ GET "$base/calendar", sub {
                 $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
                 my $vevent = Data::ICal::Entry::Event->new();
                 $vevent->add_properties(
-                  description => "$boxscore\n" . strftime('%FT%T', gmtime),
+                  description => "$boxscore\n\n"
+                    . $g->{video_url} . "\n\n"
+                    . strftime('%FT%T', gmtime),
                   dtstart         => Date::ICal->new(epoch => $start)->ical,
                   duration        => $duration,
                   'last-modified' => Date::ICal->new(epoch => time)->ical,
@@ -161,10 +170,11 @@ GET "$base/calendar", sub {
                 );
                 push(@VEVENT, $vevent);
               }
-            }
+              $counter--;
+              EV::break if !$counter;
+            };
           }
           $counter--;
-          EV::break if !$counter;
         };
       }
       $counter--;
