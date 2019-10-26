@@ -142,8 +142,11 @@ GET "$base/calendar", sub {
                 $score = 'vs' if $score eq '0:0';
                 my $away    = $g->{away}->{label};
                 my $home    = $g->{home}->{label};
-                my $summary = "$away $score $home";
+                my $game    = $1 if $g->{label} =~ m{#(\d+)};
+                my $round   = $1 if $g->{label} =~ m{\((.*?)\)};
+                my $summary = "#$game $away $score $home";
                 $summary .= " - $t->{tournamentname}";
+                $summary .= " - $round";
                 $summary =~ s{Chinese Taipei}{Taiwan};
                 next if $summary !~ m{Taiwan};
                 my $boxscore = $url . '/box-score/' . $g->{id};
