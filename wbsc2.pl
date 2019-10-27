@@ -80,7 +80,8 @@ sub GET
   $T{ $url . '/' } = time;
   warn "=> GET $url\n";
   my %headers;
-  $headers{Accept} = 'application/vnd.wbsc_tournaments.v1+json';
+  $headers{Accept} = 'application/vnd.wbsc_tournaments.v1+json'
+    if $url =~ m{api.wbsc.org};
   http_get $url,
     headers => \%headers,
     sub {
