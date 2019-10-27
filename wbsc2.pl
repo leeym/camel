@@ -83,7 +83,11 @@ sub GET
   $headers{Accept} = 'application/vnd.wbsc_tournaments.v1+json';
   http_get $url,
     headers => \%headers,
-    $cb;
+    sub {
+    $cb->(@_);
+    $counter--;
+    EV::break if !$counter;
+  }
 }
 
 sub elapsed
@@ -149,8 +153,6 @@ GET "$base/calendar", sub {
                 $summary .= " - $round";
                 $summary =~ s{Chinese Taipei}{Taiwan};
                 next if $summary !~ m{Taiwan};
-                my $boxscore = $url . '/box-score/' . $g->{id};
-                $boxscore =~ s{/en/}{/zh/};
                 my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $g->{start});
                 $ENV{TZ} = tz($g, $t);
                 my $start = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
@@ -160,8 +162,7 @@ GET "$base/calendar", sub {
                 $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
                 my $vevent = Data::ICal::Entry::Event->new();
                 $vevent->add_properties(
-                  description => "$boxscore\n\n"
-                    . $g->{video_url} . "\n\n"
+                  description => $g->{video_url} . "\n\n"
                     . strftime('%FT%T', gmtime),
                   dtstart         => Date::ICal->new(epoch => $start)->ical,
                   duration        => $duration,
@@ -169,21 +170,16 @@ GET "$base/calendar", sub {
                   location        => $g->{stadium} . ', ' . $g->{location},
                   summary         => $summary,
                   uid             => $g->{id},
-                  url             => $boxscore,
+                  url             => $g->{video_url},
                 );
                 push(@VEVENT, $vevent);
               }
-              $counter--;
-              EV::break if !$counter;
             };
           }
-          $counter--;
         };
       }
-      $counter--;
     };
   }
-  $counter--;
 };
 EV::run;
 foreach my $vevent (sort { dtstart($a) cmp dtstart($b) } @VEVENT)
