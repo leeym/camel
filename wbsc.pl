@@ -19,6 +19,7 @@ my $base = 'http://www.wbsc.org';
 my $YEAR = (localtime)[5] + 1900;
 my %URL;
 my %TOURNAMENT;
+my @VEVENT;
 
 sub get
 {
@@ -26,7 +27,10 @@ sub get
   return if $URL{$url};
   $URL{$url}++;
   my %options;
-  $options{headers}{Accept} = 'application/vnd.wbsc_tournaments.v1+json';
+  if ($url =~ m{api.wbsc.org})
+  {
+    $options{headers}{Accept} = 'application/vnd.wbsc_tournaments.v1+json';
+  }
   my $start   = time;
   my $res     = $http->get($url, \%options);
   my $elapsed = int((time - $start) * 1000);
@@ -98,13 +102,15 @@ sub schedules
     my ($hour, $min) = split(/\D/, $duration);
     $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
     my $vevent = Data::ICal::Entry::Event->new();
-    my $video_url =
-      $g->{video_url} || 'https://www.youtube.com/watch?v=' . $g->{video_id};
+    my $videourl;
+    $videourl = 'https://youtu.be/' . $g->{video_id} if $g->{video_id};
+    $videourl = $g->{video_url} if $g->{video_url};
+    my $description;
+    $description .= "BOXSCORE: $boxscore\n\n" if $boxscore;
+    $description .= "VIDEOURL: $videourl\n\n" if $videourl;
+    $description .= "UPDATED : " . strftime('%FT%T%z', gmtime);
     $vevent->add_properties(
-      description => "BOXSCORE: $boxscore\n"
-        . "VIDEO   : $video_url\n"
-        . 'UPDATE  :'
-        . strftime('%FT%T%z', gmtime),
+      description     => $description,
       dtstart         => Date::ICal->new(epoch => $start)->ical,
       duration        => $duration,
       'last-modified' => Date::ICal->new(epoch => time)->ical,
@@ -113,7 +119,7 @@ sub schedules
       uid             => $g->{id},
       url             => $boxscore,
     );
-    $ics->add_entry($vevent);
+    push(@VEVENT, $vevent);
   }
   my $p = $s->{meta}->{pagination};
   schedules($p->{links}->{next}) if $p->{current_page} < $p->{total_pages};
@@ -150,7 +156,25 @@ foreach my $year ($YEAR .. $YEAR + 1)
   }
 }
 
+sub dtstart
+{
+  my $vevent = shift;
+  return value($vevent, 'dtstart');
+}
+
+sub value
+{
+  my $vevent = shift;
+  my $field  = shift;
+  return $vevent->{properties}->{$field}[0]->{value};
+}
+
 END
 {
+  warn "\nTotal: " . scalar(@VEVENT) . " events\n\n";
+  foreach my $vevent (sort { dtstart($a) <=> dtstart($b) } @VEVENT)
+  {
+    $ics->add_entry($vevent);
+  }
   print $ics->as_string;
 }
