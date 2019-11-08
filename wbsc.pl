@@ -94,7 +94,7 @@ sub schedules
     $summary .= " - $round";
     $summary =~ s{Chinese Taipei}{Taiwan};
     warn join(' ', $g->{id}, $g->{start}, $ENV{TZ}, $summary) . "\n";
-    my $boxscore = $t->{external_link} . '/box-score/' . $g->{id};
+    my $boxscore = $t->{external_link} . '/schedule-and-results/box-score/' . $g->{id};
     $boxscore =~ s{/en/}{/zh/};
     my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $g->{start});
     my $start    = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
