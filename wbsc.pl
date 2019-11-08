@@ -91,8 +91,7 @@ sub videourl
 {
   my $g = shift;
   my $t = shift;
-  return $g->{video_url} if $g->{video_url};
-  return 'http://youtu.be' . $g->{video_id} if $g->{video_id};
+  return 'https://www.gametime.sport/event/' . $t->{id} . '/game/' . $g->{id};
 }
 
 foreach my $year ($YEAR .. $YEAR + 1)
