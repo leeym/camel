@@ -82,7 +82,7 @@ sub boxscore
 {
   my $g   = shift;
   my $t   = shift;
-  my $url = $t->{external_link} . '/schedule-and-results/boxscore' . $g->{id};
+  my $url = $t->{external_link} . '/schedule-and-results/box-score/' . $g->{id};
   $url =~ s{/en/}{/zh/};
   return $url;
 }
