@@ -91,6 +91,7 @@ sub videourl
 {
   my $g = shift;
   my $t = shift;
+  return $g->{gamevideo} if $g->{gamevideo};
   return 'https://www.gametime.sport/event/' . $t->{id} . '/game/' . $g->{id};
 }
 
