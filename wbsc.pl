@@ -129,8 +129,14 @@ foreach my $year ($YEAR .. $YEAR + 1)
         $summary .= " - $t->{tournamentname}";
         $summary .= " - $g->{gametypelabel}";
         $summary =~ s{Chinese Taipei}{Taiwan};
-        warn $g->{start} . ' (' . $ENV{TZ} . ') ' . $summary . "\n";
-        my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $g->{start});
+        my $start = $g->{start};
+
+        if ($g->{gamestart})
+        {
+          $start = (split(' ', $start))[0] . ' ' . $g->{gamestart};
+        }
+        warn $start . ' (' . $ENV{TZ} . ') ' . $summary . "\n";
+        my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
         my $start = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
         my $duration = $g->{duration} || '3:00';
         my ($hour, $min) = split(/\D/, $duration);
