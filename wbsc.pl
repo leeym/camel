@@ -6,9 +6,9 @@ use Data::ICal;
 use Date::ICal;
 use HTTP::Tiny;
 use IO::Socket::SSL;
-use JSON::Tiny qw(encode_json decode_json);
+use JSON::Tiny qw(decode_json);
 use Net::SSLeay;
-use POSIX qw(mktime strftime);
+use POSIX qw(mktime);
 use Time::HiRes qw(time);
 use strict;
 
@@ -87,14 +87,6 @@ sub boxscore
   return $url;
 }
 
-sub videourl
-{
-  my $g = shift;
-  my $t = shift;
-  return $g->{gamevideo} if $g->{gamevideo};
-  return 'https://www.gametime.sport/event/' . $t->{id} . '/game/' . $g->{id};
-}
-
 foreach my $year ($YEAR .. $YEAR + 1)
 {
   my $html = get("$base/calendar/$year");
@@ -138,18 +130,17 @@ foreach my $year ($YEAR .. $YEAR + 1)
         }
         warn $start . ' (' . $ENV{TZ} . ') ' . $summary . "\n";
         my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
-        my $start = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+        my $dtstart  = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
         my $duration = $g->{duration} || '3:00';
         my ($hour, $min) = split(/\D/, $duration);
         $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
         my $description;
-        $description .= "BOXSCORE: " . boxscore($g, $t) . "\n";
-        $description .= "VIDEOURL: " . videourl($g, $t) . "\n";
-        $description .= "UPDATED : " . strftime('%FT%T%z', gmtime);
+        $description .= boxscore($g, $t) . "\n";
+        $description .= Date::ICal->new(epoch => time)->ical;
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           description     => $description,
-          dtstart         => Date::ICal->new(epoch => $start)->ical,
+          dtstart         => Date::ICal->new(epoch => $dtstart)->ical,
           duration        => $duration,
           'last-modified' => Date::ICal->new(epoch => time)->ical,
           location        => $g->{stadium} . ', ' . $g->{location},
