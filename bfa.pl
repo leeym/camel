@@ -40,6 +40,7 @@ sub tz
   return 'Asia/Shanghai'  if $host =~ m{China}i;
   return 'Asia/Shanghai'  if $host =~ m{2019 X BFA U15 Baseball Championship}i;
   return 'Asia/Taipei'    if $host =~ m{2019 XXIX Asian Baseball Championship}i;
+  return 'Asia/Shanghai'  if $host =~ m{2019 II BFA Women's Baseball Asia Cup}i;
   return 'Asia/Hong_Kong' if $host =~ m{Hong Kong}i;
   return 'Asia/Jakarta'   if $host =~ m{Jakarta}i;
   die "Cannot determine TZ based on $host";
