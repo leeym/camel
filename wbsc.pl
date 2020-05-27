@@ -87,7 +87,7 @@ sub boxscore
   return $url;
 }
 
-foreach my $year ($YEAR .. $YEAR + 1)
+foreach my $year ($YEAR - 1 .. $YEAR + 1)
 {
   my $html = get("$base/calendar/$year");
   foreach my $event ($html =~ m{href="([^"]+)" target="_blank"}g)
@@ -99,6 +99,7 @@ foreach my $year ($YEAR .. $YEAR + 1)
     next if $event =~ m{baseball5};
     $event .= "/en/$year" if $event !~ m{$year};
     $event .= '/schedule-and-results';
+    next if $event =~ m{/e-2020-};
     my $html   = get($event);
     my @SCRIPT = ($html =~ m{(<script.*?</script>)}g);
 
@@ -130,7 +131,7 @@ foreach my $year ($YEAR .. $YEAR + 1)
         }
         warn $start . ' (' . $ENV{TZ} . ') ' . $summary . "\n";
         my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
-        my $dtstart  = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+        my $dtstart = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
         my $duration = $g->{duration} || '3:00';
         my ($hour, $min) = split(/\D/, $duration);
         $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
