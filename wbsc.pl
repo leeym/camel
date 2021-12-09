@@ -97,6 +97,7 @@ foreach my $year ($YEAR - 1 .. $YEAR + 1)
     next if $event =~ m{rankings};
     next if $event =~ m{congress};
     next if $event =~ m{baseball5};
+    next if $event =~ m{/en/\d+} && $event !~ m{$year};
     $event .= "/en/$year" if $event !~ m{$year};
     $event .= '/schedule-and-results';
     next if $event =~ m{/e-2020-};
