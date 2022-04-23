@@ -80,9 +80,9 @@ sub tz
 
 sub boxscore
 {
+  my $event = shift;
   my $g   = shift;
-  my $t   = shift;
-  my $url = $t->{external_link} . '/schedule-and-results/box-score/' . $g->{id};
+  my $url = $event . '/box-score/' . $g->{id};
   $url =~ s{/en/}{/zh/};
   return $url;
 }
@@ -130,7 +130,7 @@ foreach my $year ($YEAR - 1 .. $YEAR + 1)
         my ($hour, $min) = split(/\D/, $duration);
         $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
         my $description;
-        $description .= boxscore($g, $t) . "\n";
+        $description .= boxscore($event, $g) . "\n";
         $description .= Date::ICal->new(epoch => time)->ical;
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
@@ -141,7 +141,7 @@ foreach my $year ($YEAR - 1 .. $YEAR + 1)
           location        => $g->{stadium} . ', ' . $g->{location},
           summary         => $summary,
           uid             => $g->{id},
-          url             => boxscore($g, $t),
+          url             => boxscore($event, $g),
         );
         push(@VEVENT, $vevent);
       }
