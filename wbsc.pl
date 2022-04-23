@@ -87,7 +87,7 @@ sub boxscore
   return $url;
 }
 
-foreach my $year ($YEAR - 2 .. $YEAR + 1)
+foreach my $year ($YEAR - 1 .. $YEAR + 1)
 {
   my $html = get("$base/calendar/$year");
   foreach my $event ($html =~ m{href="([^"]+)"}g)
