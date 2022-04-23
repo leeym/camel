@@ -24,8 +24,7 @@ sub get
 {
   my $url = shift;
   $url =~ s{^http:}{https:};
-  die "$url: duplicate\n" if $URL{$url};
-  $URL{$url}++;
+  return $URL{$url} if $URL{$url};
   my $start   = time;
   my $res     = $http->get($url);
   my $elapsed = int((time - $start) * 1000);
@@ -36,6 +35,7 @@ sub get
   $body =~ s/&#039;/'/g;
   $body =~ s/\r//g;
   $body =~ s/\n//g;
+  $URL{$url} = $body;
   return $body;
 }
 
@@ -87,20 +87,13 @@ sub boxscore
   return $url;
 }
 
-foreach my $year ($YEAR - 1 .. $YEAR + 1)
+foreach my $year ($YEAR - 2 .. $YEAR + 1)
 {
   my $html = get("$base/calendar/$year");
-  foreach my $event ($html =~ m{href="([^"]+)" target="_blank"}g)
+  foreach my $event ($html =~ m{href="([^"]+)"}g)
   {
-    next if $event !~ m{wbsc.org};
-    next if $event =~ m{edition};
-    next if $event =~ m{rankings};
-    next if $event =~ m{congress};
-    next if $event =~ m{baseball5};
-    next if $event =~ m{/en/\d+} && $event !~ m{$year};
-    $event .= "/en/$year" if $event !~ m{$year};
-    $event .= '/schedule-and-results';
-    next if $event =~ m{/e-2020-};
+    next if $event !~ m{/events/$year-.*/home$};
+    $event =~ s,/home,/schedule-and-results,;
     my $html   = get($event);
     my @SCRIPT = ($html =~ m{(<script.*?</script>)}g);
 
