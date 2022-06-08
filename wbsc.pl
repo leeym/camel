@@ -18,7 +18,7 @@ my $http = new HTTP::Tiny;
 my $base = 'http://www.wbsc.org';
 my $YEAR = (localtime)[5] + 1900;
 my %URL;
-my @VEVENT;
+my %VEVENT;
 
 sub get
 {
@@ -101,7 +101,7 @@ foreach my $year ($YEAR - 1 .. $YEAR + 1)
     {
       next if $script !~ m{schedule:};
       next if $script !~ m{tournament:};
-      my $s = $1 if $script =~ m{schedule:\s*(\{.*?\})\s{8,}\};};
+      my $s = $1 if $script =~ m{schedule:\s*(\{.*?\})\s{6,}\};};
       $s = decode_json($s);
       my $t = $1 if $script =~ m{tournament:\s*(\{.*?\}),\s{8,}};
       $t = decode_json($t);
@@ -143,7 +143,7 @@ foreach my $year ($YEAR - 1 .. $YEAR + 1)
           uid             => $g->{id},
           url             => boxscore($event, $g),
         );
-        push(@VEVENT, $vevent);
+        $VEVENT{$g->{id}} = $vevent;
       }
     }
   }
@@ -151,10 +151,10 @@ foreach my $year ($YEAR - 1 .. $YEAR + 1)
 
 END
 {
-  warn "\nTotal: " . scalar(@VEVENT) . " events\n\n";
-  foreach my $vevent (@VEVENT)
+  warn "\nTotal: " . scalar(keys %VEVENT) . " events\n\n";
+  foreach my $id (sort keys %VEVENT)
   {
-    $ics->add_entry($vevent);
+    $ics->add_entry($VEVENT{$id});
   }
   print $ics->as_string;
 }
