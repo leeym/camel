@@ -8,7 +8,7 @@ use HTTP::Tiny;
 use IO::Socket::SSL;
 use JSON::Tiny qw(decode_json);
 use Net::SSLeay;
-use POSIX qw(mktime);
+use POSIX       qw(mktime);
 use Time::HiRes qw(time);
 use strict;
 
@@ -22,139 +22,139 @@ my %VEVENT;
 
 sub get
 {
-  my $url = shift;
-  $url =~ s{^http:}{https:};
-  return $URL{$url} if $URL{$url};
-  my $start   = time;
-  my $res     = $http->get($url);
-  my $elapsed = int((time - $start) * 1000);
-  die "$url: $res->{status}: $res->{reason}" if !$res->{success};
-  warn "GET $url ($elapsed ms)\n";
-  my $body = $res->{content};
-  $body =~ s/\\u\w+//g;
-  $body =~ s/&#039;/'/g;
-  $body =~ s/\r//g;
-  $body =~ s/\n//g;
-  $URL{$url} = $body;
-  return $body;
+    my $url = shift;
+    $url =~ s{^http:}{https:};
+    return $URL{$url} if $URL{$url};
+    my $start   = time;
+    my $res     = $http->get($url);
+    my $elapsed = int((time - $start) * 1000);
+    die "$url: $res->{status}: $res->{reason}" if !$res->{success};
+    warn "GET $url ($elapsed ms)\n";
+    my $body = $res->{content};
+    $body =~ s/\\u\w+//g;
+    $body =~ s/&#039;/'/g;
+    $body =~ s/\r//g;
+    $body =~ s/\n//g;
+    $URL{$url} = $body;
+    return $body;
 }
 
 sub mmdd
 {
-  my ($dd, $mm, $yy) = split('/', shift);
-  return "$yy-$mm-$dd";
+    my ($dd, $mm, $yy) = split('/', shift);
+    return "$yy-$mm-$dd";
 }
 
 sub tz
 {
-  my $g = shift;
-  my $t = shift;
-  return $g->{start_tz} if $g->{start_tz};
-  my $country = '';
-  $country = $1 if ($g->{location} =~ m{\(([A-Z]{3})\)});
-  foreach my $venue (@{ $t->{venues} })
-  {
-    next if $venue->{id} != $g->{venueid};
-    return decode_json($venue->{info})->{timezone}->{timezone}
-      if $venue->{info};
-    $country = $venue->{country} if $venue->{country};
-  }
-  if (!$country)
-  {
-    my @COUNTRIES = keys(%{ $t->{hostinfo} });
-    $country = shift @COUNTRIES if scalar(@COUNTRIES) == 1;
-  }
-  if ($country && $t->{hostinfo}->{$country})
-  {
-    return $t->{hostinfo}->{$country}->{timezone};
-  }
-  warn 'G:' . Dumper($g);
-  warn 'T:' . Dumper($t);
-  die 'Unable to determine timezone for venueid:'
-    . $g->{venueid}
-    . ' location:'
-    . $g->{location}
-    . ' country:'
-    . $country;
+    my $g = shift;
+    my $t = shift;
+    return $g->{start_tz} if $g->{start_tz};
+    my $country = '';
+    $country = $1 if ($g->{location} =~ m{\(([A-Z]{3})\)});
+    foreach my $venue (@{ $t->{venues} })
+    {
+        next if $venue->{id} != $g->{venueid};
+        return decode_json($venue->{info})->{timezone}->{timezone}
+          if $venue->{info};
+        $country = $venue->{country} if $venue->{country};
+    }
+    if (!$country)
+    {
+        my @COUNTRIES = keys(%{ $t->{hostinfo} });
+        $country = shift @COUNTRIES if scalar(@COUNTRIES) == 1;
+    }
+    if ($country && $t->{hostinfo}->{$country})
+    {
+        return $t->{hostinfo}->{$country}->{timezone};
+    }
+    warn 'G:' . Dumper($g);
+    warn 'T:' . Dumper($t);
+    die 'Unable to determine timezone for venueid:'
+      . $g->{venueid}
+      . ' location:'
+      . $g->{location}
+      . ' country:'
+      . $country;
 }
 
 sub boxscore
 {
-  my $event = shift;
-  my $g   = shift;
-  my $url = $event . '/box-score/' . $g->{id};
-  $url =~ s{/en/}{/zh/};
-  return $url;
+    my $event = shift;
+    my $g     = shift;
+    my $url   = $event . '/box-score/' . $g->{id};
+    $url =~ s{/en/}{/zh/};
+    return $url;
 }
 
-foreach my $year ($YEAR - 1 .. $YEAR + 1)
+foreach my $year ($YEAR .. $YEAR + 1)
 {
-  my $html = get("$base/calendar/$year");
-  foreach my $event ($html =~ m{href="([^"]+)"}g)
-  {
-    next if $event !~ m{/events/$year-.*/home$};
-    $event =~ s,/home,/schedule-and-results,;
-    my $html   = get($event);
-    my @SCRIPT = ($html =~ m{(<script.*?</script>)}g);
-
-    foreach my $script (@SCRIPT)
+    my $html = get("$base/calendar/$year");
+    foreach my $event ($html =~ m{href="([^"]+)"}g)
     {
-      next if $script !~ m{schedule:};
-      next if $script !~ m{tournament:};
-      my $s = $1 if $script =~ m{schedule:\s*(\{.*?\})\s{6,}\};};
-      $s = decode_json($s);
-      my $t = $1 if $script =~ m{tournament:\s*(\{.*?\}),\s{8,}};
-      $t = decode_json($t);
-      foreach my $g (@{ $s->{games} })
-      {
-        next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
-        $ENV{TZ} = tz($g, $t);
-        my $score = "$g->{awayruns}:$g->{homeruns}";
-        $score = 'vs' if $score eq '0:0';
-        my $away    = "$g->{awaylabel}";
-        my $home    = "$g->{homelabel}";
-        my $summary = "#$g->{gamenumber} $away $score $home";
-        $summary .= " - $t->{tournamentname}";
-        $summary .= " - $g->{gametypelabel}";
-        $summary =~ s{Chinese Taipei}{Taiwan};
-        my $start = $g->{start};
+        next if $event !~ m{/events/$year-.*/home$};
+        $event =~ s,/home,/schedule-and-results,;
+        my $html   = get($event);
+        my @SCRIPT = ($html =~ m{(<script.*?</script>)}g);
 
-        if ($g->{gamestart})
+        foreach my $script (@SCRIPT)
         {
-          $start = (split(' ', $start))[0] . ' ' . $g->{gamestart};
+            next if $script !~ m{schedule:};
+            next if $script !~ m{tournament:};
+            my $s = $1 if $script =~ m{schedule:\s*(\{.*?\})\s{6,}\};};
+            $s = decode_json($s);
+            my $t = $1 if $script =~ m{tournament:\s*(\{.*?\}),\s{8,}};
+            $t = decode_json($t);
+            foreach my $g (@{ $s->{games} })
+            {
+                next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
+                $ENV{TZ} = tz($g, $t);
+                my $score = "$g->{awayruns}:$g->{homeruns}";
+                $score = 'vs' if $score eq '0:0';
+                my $away    = "$g->{awaylabel}";
+                my $home    = "$g->{homelabel}";
+                my $summary = "#$g->{gamenumber} $away $score $home";
+                $summary .= " - $t->{tournamentname}";
+                $summary .= " - $g->{gametypelabel}";
+                $summary =~ s{Chinese Taipei}{Taiwan};
+                my $start = $g->{start};
+
+                if ($g->{gamestart})
+                {
+                    $start = (split(' ', $start))[0] . ' ' . $g->{gamestart};
+                }
+                warn $start . ' (' . $ENV{TZ} . ') ' . $summary . "\n";
+                my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
+                my $dtstart  = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+                my $duration = $g->{duration} || '3:00';
+                my ($hour, $min) = split(/\D/, $duration);
+                $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
+                my $description;
+                $description .= boxscore($event, $g) . "\n";
+                $description .= Date::ICal->new(epoch => time)->ical;
+                my $vevent = Data::ICal::Entry::Event->new();
+                $vevent->add_properties(
+                    description     => $description,
+                    dtstart         => Date::ICal->new(epoch => $dtstart)->ical,
+                    duration        => $duration,
+                    'last-modified' => Date::ICal->new(epoch => time)->ical,
+                    location        => $g->{stadium} . ', ' . $g->{location},
+                    summary         => $summary,
+                    uid             => $g->{id},
+                    url             => boxscore($event, $g),
+                );
+                $VEVENT{ $g->{id} } = $vevent;
+            }
         }
-        warn $start . ' (' . $ENV{TZ} . ') ' . $summary . "\n";
-        my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
-        my $dtstart = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
-        my $duration = $g->{duration} || '3:00';
-        my ($hour, $min) = split(/\D/, $duration);
-        $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
-        my $description;
-        $description .= boxscore($event, $g) . "\n";
-        $description .= Date::ICal->new(epoch => time)->ical;
-        my $vevent = Data::ICal::Entry::Event->new();
-        $vevent->add_properties(
-          description     => $description,
-          dtstart         => Date::ICal->new(epoch => $dtstart)->ical,
-          duration        => $duration,
-          'last-modified' => Date::ICal->new(epoch => time)->ical,
-          location        => $g->{stadium} . ', ' . $g->{location},
-          summary         => $summary,
-          uid             => $g->{id},
-          url             => boxscore($event, $g),
-        );
-        $VEVENT{$g->{id}} = $vevent;
-      }
     }
-  }
 }
 
 END
 {
-  warn "\nTotal: " . scalar(keys %VEVENT) . " events\n\n";
-  foreach my $id (sort keys %VEVENT)
-  {
-    $ics->add_entry($VEVENT{$id});
-  }
-  print $ics->as_string;
+    warn "\nTotal: " . scalar(keys %VEVENT) . " events\n\n";
+    foreach my $id (sort { $a <=> $b } keys %VEVENT)
+    {
+        $ics->add_entry($VEVENT{$id});
+    }
+    print $ics->as_string;
 }
