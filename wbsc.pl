@@ -16,7 +16,6 @@ my $team = shift || 'TPE';
 my $ics  = new Data::ICal;
 my $http = new HTTP::Tiny;
 my $base = 'http://www.wbsc.org';
-my $YEAR = (localtime)[5] + 1900;
 my %URL;
 my %VEVENT;
 
@@ -87,7 +86,17 @@ sub boxscore
     return $url;
 }
 
-foreach my $year ($YEAR .. $YEAR + 1)
+sub yyyy0
+{
+    return (localtime)[5] + 1900 - (((localtime)[4] + 1) <= 3 ? 1 : 0);
+}
+
+sub yyyy1
+{
+    return (localtime)[5] + 1900 + (((localtime)[4] + 1) >= 10 ? 1 : 0);
+}
+
+foreach my $year (yyyy0() .. yyyy1())
 {
     my $html = get("$base/calendar/$year");
     foreach my $event ($html =~ m{href="([^"]+)"}g)
@@ -107,6 +116,7 @@ foreach my $year ($YEAR .. $YEAR + 1)
             $t = decode_json($t);
             foreach my $g (@{ $s->{games} })
             {
+                next if $VEVENT{ $g->{id} };
                 next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
                 $ENV{TZ} = tz($g, $t);
                 my $score = "$g->{awayruns}:$g->{homeruns}";
@@ -123,8 +133,8 @@ foreach my $year ($YEAR .. $YEAR + 1)
                 {
                     $start = (split(' ', $start))[0] . ' ' . $g->{gamestart};
                 }
-                warn $start . ' (' . $ENV{TZ} . ') ' . $summary . "\n";
                 my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
+                warn "$yyyy-$mm-$dd $HH:$MM ($ENV{TZ}) $summary\n";
                 my $dtstart  = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
                 my $duration = $g->{duration} || '3:00';
                 my ($hour, $min) = split(/\D/, $duration);
