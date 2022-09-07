@@ -101,7 +101,7 @@ foreach my $year (yyyy0() .. yyyy1())
     my $html = get("$base/calendar/$year");
     foreach my $event ($html =~ m{href="([^"]+)"}g)
     {
-        next if $event !~ m{/events/$year-.*/home$};
+        next if $event !~ m{/events/\d{4}-.*/home$};
         $event =~ s,/home,/schedule-and-results,;
         my $html   = get($event);
         my @SCRIPT = ($html =~ m{(<script.*?</script>)}g);
