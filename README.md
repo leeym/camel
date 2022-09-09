@@ -27,7 +27,7 @@ Steps to deploy Camel in AWS Lambda.
    * Runtime: "Provide your own boostrap"
    * Execution role: "Use an existing role" if you already have one, otherwise "Create a new role with basic Lambda permissions"
 2. [Add a layer](https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/add/layer?function=Camel)
-   * Provide a layer version ARN: "arn:aws:lambda:us-west-2:652718333417:layer:perl-5_28-layer:1"
+   * Provide a layer version ARN: "arn:aws:lambda:us-west-2:445285296882:layer:perl-5-30-runtime:15"
 3. [Configuration](https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/functions/Camel?tab=graph)
    * Basic settings
       * Timeout: 0 min 28 sec

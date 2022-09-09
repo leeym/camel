@@ -2,7 +2,7 @@
 
 ROOT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 CONTAINER_BASE_DIR := /tmp/func
-CONTAINER_TAG=5.28
+CONTAINER_TAG=5.30
 
 build: clean cpanfile
 ifndef CONTAINER_TAG
