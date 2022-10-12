@@ -98,59 +98,54 @@ sub yyyy1
 
 sub event
 {
-    my $url    = shift;
-    my $html   = get($url);
-    my @SCRIPT = ($html =~ m{(<script.*?</script>)}g);
+    my $url  = shift;
+    my $html = get($url);
+    my $data = $1 if $html =~ m{data-page="(.*?)">};
+    return if !$data;
+    $data =~ s{&quot;}{"}g;
+    my $d = decode_json($data);
+    my $t = $d->{props}->{tournament};
 
-    foreach my $script (@SCRIPT)
+    foreach my $g (@{ $d->{props}->{games} })
     {
-        next if $script !~ m{schedule:};
-        next if $script !~ m{tournament:};
-        my $s = $1 if $script =~ m{schedule:\s*(\{.*?\})\s{6,}\};};
-        $s = decode_json($s);
-        my $t = $1 if $script =~ m{tournament:\s*(\{.*?\}),\s{8,}};
-        $t = decode_json($t);
-        foreach my $g (@{ $s->{games} })
-        {
-            next if $VEVENT{ $g->{id} };
-            next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
-            $ENV{TZ} = tz($g, $t);
-            my $score = "$g->{awayruns}:$g->{homeruns}";
-            $score = 'vs' if $score eq '0:0';
-            my $away    = "$g->{awaylabel}";
-            my $home    = "$g->{homelabel}";
-            my $summary = "#$g->{gamenumber} $away $score $home";
-            $summary .= " - $t->{tournamentname}";
-            $summary .= " - $g->{gametypelabel}";
-            $summary =~ s{Chinese Taipei}{Taiwan};
-            my $start = $g->{start};
+        next if $VEVENT{ $g->{id} };
+        next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
+        $ENV{TZ} = tz($g, $t);
+        my $score = "$g->{awayruns}:$g->{homeruns}";
+        $score = 'vs' if $score eq '0:0';
+        my $away    = "$g->{awaylabel}";
+        my $home    = "$g->{homelabel}";
+        my $summary = "#$g->{gamenumber} $away $score $home";
+        $summary .= " - $t->{tournamentname}";
+        $summary .= " - $g->{gametypelabel}";
+        $summary =~ s{Chinese Taipei}{Taiwan};
+        my $start = $g->{start};
 
-            if ($g->{gamestart})
-            {
-                $start = (split(' ', $start))[0] . ' ' . $g->{gamestart};
-            }
-            my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
-            warn "$yyyy-$mm-$dd $HH:$MM ($ENV{TZ}) $summary\n";
-            my $dtstart  = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
-            my $duration = $g->{duration} || '3:00';
-            my ($hour, $min) = split(/\D/, $duration);
-            $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
-            my $description;
-            $description .= boxscore($url, $g) . "\n";
-            $description .= Date::ICal->new(epoch => time)->ical;
-            my $vevent = Data::ICal::Entry::Event->new();
-            $vevent->add_properties(
-                description     => $description,
-                dtstart         => Date::ICal->new(epoch => $dtstart)->ical,
-                duration        => $duration,
-                'last-modified' => Date::ICal->new(epoch => time)->ical,
-                location        => $g->{stadium} . ', ' . $g->{location},
-                summary         => $summary,
-                uid             => $g->{id},
-                url             => boxscore($url, $g),
-            );
-            $VEVENT{ $g->{id} } = $vevent;
+        if ($g->{gamestart})
+        {
+            $start = (split(' ', $start))[0] . ' ' . $g->{gamestart};
         }
+        my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
+        warn "$yyyy-$mm-$dd $HH:$MM ($ENV{TZ}) $summary\n";
+        my $dtstart  = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+        my $duration = $g->{duration} || '3:00';
+        my ($hour, $min) = split(/\D/, $duration);
+        $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
+        my $description;
+        $description .= boxscore($url, $g) . "\n";
+        $description .= Date::ICal->new(epoch => time)->ical;
+        my $vevent = Data::ICal::Entry::Event->new();
+        $vevent->add_properties(
+            description     => $description,
+            dtstart         => Date::ICal->new(epoch => $dtstart)->ical,
+            duration        => $duration,
+            'last-modified' => Date::ICal->new(epoch => time)->ical,
+            location        => $g->{stadium} . ', ' . $g->{location},
+            summary         => $summary,
+            uid             => $g->{id},
+            url             => boxscore($url, $g),
+        );
+        $VEVENT{ $g->{id} } = $vevent;
     }
 }
 
