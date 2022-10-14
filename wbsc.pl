@@ -116,7 +116,7 @@ sub event
         my $away    = "$g->{awaylabel}";
         my $home    = "$g->{homelabel}";
         my $summary = "#$g->{gamenumber} $away $score $home";
-        $summary .= " - $t->{tournamentname}";
+        $summary .= " | $t->{tournamentname}";
         $summary .= " - $g->{gametypelabel}";
         $summary =~ s{Chinese Taipei}{Taiwan};
         my $start = $g->{start};
@@ -132,8 +132,9 @@ sub event
         my ($hour, $min) = split(/\D/, $duration);
         $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
         my $description;
-        $description .= boxscore($url, $g) . "\n";
-        $description .= Date::ICal->new(epoch => time)->ical;
+        $description .= "* " . boxscore($url, $g) . "\n";
+        $description .= "* " . $g->{gamevideo} . "\n" if $g->{gamevideo};
+        $description .= "* " . Date::ICal->new(epoch => time)->ical;
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
             description     => $description,
