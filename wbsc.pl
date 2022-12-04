@@ -96,6 +96,14 @@ sub yyyy1
     return (localtime)[5] + 1900 + (((localtime)[4] + 1) >= 10 ? 1 : 0);
 }
 
+sub duration
+{
+    my $summary = shift;
+    return '1:10' if $summary =~ m{U-12};
+    return '2:00' if $summary =~ m{U-15};
+    return '3:00';
+}
+
 sub event
 {
     my $url  = shift;
@@ -128,7 +136,7 @@ sub event
         my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
         warn "$yyyy-$mm-$dd $HH:$MM ($ENV{TZ}) $summary\n";
         my $dtstart  = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
-        my $duration = $g->{duration} || '3:00';
+        my $duration = $g->{duration} || duration($summary);
         my ($hour, $min) = split(/\D/, $duration);
         $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
         my $description;
