@@ -168,7 +168,7 @@ foreach my $year (yyyy0() .. yyyy1())
         $url =~ s,/home,/schedule-and-results,;
         event($url);
     }
-    last if time() - $start > 20;
+    last if time() - $start > 15;
 }
 
 END
