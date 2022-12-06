@@ -18,6 +18,7 @@ my $http = new HTTP::Tiny;
 my $base = 'http://www.wbsc.org';
 my %URL;
 my %VEVENT;
+my $start = time();
 
 sub get
 {
@@ -167,6 +168,7 @@ foreach my $year (yyyy0() .. yyyy1())
         $url =~ s,/home,/schedule-and-results,;
         event($url);
     }
+    last if time() - $start > 20;
 }
 
 END
