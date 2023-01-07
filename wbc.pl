@@ -56,10 +56,14 @@ foreach my $date (@{ $data->{dates} })
         $away = $twn if $away eq $tpe;
         $home = $twn if $home eq $tpe;
         warn Dumper($g);
+        my $score = sprintf('%d : %d',
+            $g->{teams}->{away}->{score},
+            $g->{teams}->{home}->{score});
+        $score = 'vs' if $score eq '0:0';
         my $summary = sprintf(
-            "#%d %s : %s | WBC 2023 - %s",
+            "#%d %s %s %s | World Baseball Classic $year - %s",
             $g->{seriesGameNumber},
-            $away, $home, $g->{seriesDescription},
+            $away, $score, $home, $g->{seriesDescription},
         );
         my $dtstart = $g->{gameDate};
         $dtstart =~ s{-}{}g;
