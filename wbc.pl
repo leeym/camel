@@ -56,7 +56,7 @@ foreach my $date (@{ $data->{dates} })
         $away = $twn if $away eq $tpe;
         $home = $twn if $home eq $tpe;
         warn Dumper($g);
-        my $score = sprintf('%d : %d',
+        my $score = sprintf('%d:%d',
             $g->{teams}->{away}->{score},
             $g->{teams}->{home}->{score});
         $score = 'vs' if $score eq '0:0';
