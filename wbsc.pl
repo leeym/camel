@@ -12,7 +12,7 @@ use POSIX       qw(mktime);
 use Time::HiRes qw(time);
 use strict;
 
-my $team = shift || 'TPE';
+my $year = shift || (localtime)[5] + 1900;
 my $ics  = new Data::ICal;
 my $http = new HTTP::Tiny;
 my $base = 'http://www.wbsc.org';
@@ -159,16 +159,12 @@ sub event
     }
 }
 
-foreach my $year (yyyy0() .. yyyy1())
+my $html = get("$base/calendar/$year");
+foreach my $url ($html =~ m{href="([^"]+)"}g)
 {
-    my $html = get("$base/calendar/$year");
-    foreach my $url ($html =~ m{href="([^"]+)"}g)
-    {
-        next if $url !~ m{/events/\d{4}-.*/home$};
-        $url =~ s,/home,/schedule-and-results,;
-        event($url);
-    }
-    last if time() - $start > 15;
+  next if $url !~ m{/events/\d{4}-.*/home$};
+  $url =~ s,/home,/schedule-and-results,;
+  event($url);
 }
 
 END

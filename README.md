@@ -16,7 +16,8 @@ You can simply write a script with `.pl` extension and invoke it with ["qp0p1"](
 * env.pl - with Module(s), probably from CPAN
 * die.pl - simulate if your call `die` in your code, STDOUT will be ignored and STDERR will be returned
 * help.pl - built-in script to list all queries
-* wbsc.pl - a working example to parse the calendar on wbsc.org and create an iCalendar
+* wbsc.pl - a working example to parse the calendar for WBSC and create an iCalendar
+* wbc.pl - a working example to parse the calendar from WBC and create an iCalendar
 
 # Deploy
 The following example is in Oregon (us-west-2) so please replace it with your own region.
@@ -56,12 +57,14 @@ Steps to expose Camel in AWS API Gateway
 * `curl -s -X POST -d 'q=echo&p0=foo&p1=bar' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
 * `curl -s -X POST -d 'q=env' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
 * `curl -s -X POST -d 'q=wbsc' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
+* `curl -s -X POST -d 'q=wbc' https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default`
 
 # Invoke (GET)
 * `curl -s -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default'`
 * `curl -s -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default?q=echo&p0=foo&p1=bar'`
 * `curl -s -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default?q=env'`
 * `curl -s -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default?q=wbsc'`
+* `curl -s -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default?q=wbc'`
 
 # Errors
 * `curl -s -D - -X GET 'https://guz56zfyl4.execute-api.us-west-2.amazonaws.com/default?q=A&q=b'` => 400
