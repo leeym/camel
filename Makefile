@@ -1,10 +1,10 @@
-.PHONY: clean build
+.PHONY: clean all
 
 ROOT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 CONTAINER_BASE_DIR := /tmp/func
 CONTAINER_TAG=5.30
 
-build: clean cpanfile
+all: clean cpanfile
 ifndef CONTAINER_TAG
 	@echo '[ERROR] $$CONTAINER_TAG must be specified'
 	@echo 'usage: make build CONTAINER_TAG=x.x'
