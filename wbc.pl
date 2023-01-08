@@ -48,6 +48,7 @@ foreach my $date (@{ $data->{dates} })
     next if $date->{totalGames} == 0;
     foreach my $g (@{ $date->{games} })
     {
+        next if $VEVENT{ $g->{gamePk} };
         my $tpe  = 'Chinese Taipei';
         my $twn  = 'Taiwan';
         my $away = $g->{teams}->{away}->{team}->{teamName};
@@ -55,16 +56,18 @@ foreach my $date (@{ $data->{dates} })
         next if $away ne $tpe && $home ne $tpe;
         $away = $twn if $away eq $tpe;
         $home = $twn if $home eq $tpe;
-        warn Dumper($g);
+
+        # warn Dumper($g);
         my $score = sprintf('%d:%d',
             $g->{teams}->{away}->{score},
             $g->{teams}->{home}->{score});
         $score = 'vs' if $score eq '0:0';
         my $summary = sprintf(
-            "#%d %s %s %s | World Baseball Classic $year - %s",
+            "#%d %s %s %s | World Baseball Classic %d - %s",
             $g->{seriesGameNumber},
-            $away, $score, $home, $g->{seriesDescription},
+            $away, $score, $home, $g->{season}, $g->{seriesDescription},
         );
+        warn "$summary\n";
         my $dtstart = $g->{gameDate};
         $dtstart =~ s{-}{}g;
         $dtstart =~ s{:}{}g;
