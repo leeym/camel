@@ -67,8 +67,8 @@ foreach my $date (@{ $data->{dates} })
             $g->{seriesGameNumber},
             $away, $score, $home, $g->{season}, $g->{seriesDescription},
         );
-        warn "$summary\n";
         my $dtstart = $g->{gameDate};
+        warn "$dtstart $summary\n";
         $dtstart =~ s{-}{}g;
         $dtstart =~ s{:}{}g;
         my $gameday     = 'https://www.mlb.com/gameday/' . $g->{gamePk};
@@ -76,13 +76,13 @@ foreach my $date (@{ $data->{dates} })
         $description .= "* " . Date::ICal->new(epoch => time)->ical . "\n";
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
+            description     => $description,
             dtstart         => $dtstart,
             duration        => 'PT3H0M',
             'last-modified' => Date::ICal->new(epoch => time)->ical,
             location        => venue($g->{venue}),
             summary         => $summary,
             uid             => $g->{gamePk},
-            description     => $description,
             url             => $gameday,
         );
         $VEVENT{ $g->{gamePk} } = $vevent;
