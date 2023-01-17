@@ -65,7 +65,7 @@ foreach my $date (@{ $data->{dates} })
         my $summary = sprintf(
             "#%d %s %s %s | World Baseball Classic %d - %s",
             $g->{seriesGameNumber},
-            $away, $score, $home, $g->{season}, $g->{seriesDescription},
+            $away, $score, $home, $g->{season}, $g->{description},
         );
         my $dtstart = $g->{gameDate};
         warn "$dtstart $summary\n";
