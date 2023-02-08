@@ -4,6 +4,7 @@ use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
 use Date::ICal;
+use Date::Parse;
 use HTTP::Tiny;
 use IO::Socket::SSL;
 use JSON::Tiny qw(decode_json);
@@ -67,17 +68,15 @@ foreach my $date (@{ $data->{dates} })
             $g->{seriesGameNumber},
             $away, $score, $home, $g->{season}, $g->{description},
         );
-        my $dtstart = $g->{gameDate};
-        warn "$dtstart $summary\n";
-        $dtstart =~ s{-}{}g;
-        $dtstart =~ s{:}{}g;
+        my $epoch = str2time($g->{gameDate});
+        warn $g->{gameDate} . " $summary\n";
         my $gameday     = 'https://www.mlb.com/gameday/' . $g->{gamePk};
-        my $description = "* $gameday\n";
+        my $description = "* $gameday \n";
         $description .= "* " . Date::ICal->new(epoch => time)->ical . "\n";
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
             description     => $description,
-            dtstart         => $dtstart,
+            dtstart         => Date::ICal->new(epoch => $epoch)->ical,
             duration        => 'PT3H0M',
             'last-modified' => Date::ICal->new(epoch => time)->ical,
             location        => venue($g->{venue}),
