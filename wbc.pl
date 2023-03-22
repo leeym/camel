@@ -13,18 +13,15 @@ use POSIX       qw(mktime);
 use Time::HiRes qw(time);
 use strict;
 
+my $year = shift || (localtime)[5] + 1900;
 my $ics  = new Data::ICal;
 my $http = new HTTP::Tiny;
 my $base = 'https://www.mlb.com/world-baseball-classic/schedule';
 my %URL;
 my %VEVENT;
 my $start = time();
-my @YEAR  = qw(2006 2009 2013 2017 2023);
 
-foreach my $year (@YEAR)
-{
-  event($year);
-}
+event($year);
 
 sub get
 {
