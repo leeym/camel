@@ -159,9 +159,12 @@ sub event
     }
 }
 
-foreach my $year (yyyy0() .. yyyy1())
+my @YEAR = ($year);
+@YEAR = (yyyy0() .. yyyy1()) if scalar(@YEAR) == 0;
+
+foreach my $yyyy (@YEAR)
 {
-    my $html = get("$base/calendar/$year/baseball");
+    my $html = get("$base/calendar/$yyyy/baseball");
     foreach my $url ($html =~ m{href="([^"]+)"}g)
     {
         next if $url !~ m{/events/\d{4}-.*/home$};
