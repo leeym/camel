@@ -84,7 +84,6 @@ sub boxscore
   my $url      = shift;
   my $g        = shift;
   my $boxscore = $url . '/box-score/' . $g->{id};
-  $boxscore =~ s{/en/}{/zh/};
   return $boxscore;
 }
 
