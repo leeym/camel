@@ -25,5 +25,5 @@ clean:
 		func.zip
 
 cpanfile:
-	cat bootstrap *.pl | grep "^use [A-Z]" | awk '{print $$2}' | sed 's/;//' | sort | sed "s/^/requires '/;s/$$/', '0';/" > cpanfile
+	cat bootstrap *.pl | grep "^use [A-Z]" | awk '{print $$2}' | sed 's/;//' | sort -u | sed "s/^/requires '/;s/$$/', '0';/" > cpanfile
 
