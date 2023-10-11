@@ -5,7 +5,7 @@ use Data::ICal::Entry::Event;
 use Data::ICal;
 use Date::ICal;
 use HTTP::Tiny;
-use IO::Async::SSL
+use IO::Async::SSL;
 use IO::Socket::SSL;
 use JSON::Tiny qw(decode_json);
 use Net::Async::HTTP;
