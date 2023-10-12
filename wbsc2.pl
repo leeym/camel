@@ -10,10 +10,8 @@ use IO::Socket::SSL;
 use JSON::Tiny qw(decode_json);
 use Net::Async::HTTP;
 use Net::SSLeay;
-use POSIX       qw(mktime);
-use Time::HiRes qw(time);
-
-#use Future::AsyncAwait;
+use POSIX         qw(mktime);
+use Time::HiRes   qw(time);
 use Future::Utils qw( fmap_void );
 use strict;
 
@@ -30,11 +28,12 @@ sub get
   my $url = shift;
   $url =~ s{^http:}{https:};
   return $URL{$url} if $URL{$url};
-  my $start   = time;
+  my $start = time;
+  warn ">>> $url\n";
   my $res     = HTTP::Tiny->new->get($url);
   my $elapsed = int((time - $start) * 1000);
   die "$url: $res->{status}: $res->{reason}" if !$res->{success};
-  warn "GET $url ($elapsed ms)\n";
+  warn "<<< $url ($elapsed ms)\n";
   my $body = $res->{content};
   $body =~ s/\\u\w+//g;
   $body =~ s/&#039;/'/g;
@@ -110,12 +109,12 @@ sub duration
 }
 
 my $loop = IO::Async::Loop->new();
-my $http = Net::Async::HTTP->new();
+my $http = Net::Async::HTTP->new(max_connections_per_host => 0);
 $loop->add($http);
 
 my @YEAR = ($year);
 @YEAR = (yyyy0() .. yyyy1()) if scalar(@YEAR) == 0;
-
+my %START;
 my @FUTURES;
 
 foreach my $yyyy (@YEAR)
@@ -125,12 +124,17 @@ foreach my $yyyy (@YEAR)
   {
     next if $url !~ m{/events/\d{4}-.*/home$};
     $url =~ s,/home,/schedule-and-results,;
+    $START{$url} = time;
+    warn ">>> $url\n";
     my $future = $http->GET($url)->on_done(
       sub {
         my $response = shift;
+        my $url      = $response->request->url;
         my $html     = $response->content;
         my $data     = $1 if $html =~ m{data-page="(.*?)">};
         return if !$data;
+        my $elapsed = int((time - $START{$url}) * 1000);
+        warn "<<< $url ($elapsed ms)\n";
         $data =~ s{&quot;}{"}g;
         my $d = decode_json($data);
         my $t = $d->{props}->{tournament};
@@ -155,7 +159,8 @@ foreach my $yyyy (@YEAR)
             $start = (split(' ', $start))[0] . ' ' . $g->{gamestart};
           }
           my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
-          warn "$yyyy-$mm-$dd $HH:$MM ($ENV{TZ}) $summary\n";
+
+          # warn "$yyyy-$mm-$dd $HH:$MM ($ENV{TZ}) $summary\n";
           my $dtstart  = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
           my $duration = $g->{duration} || duration($summary);
           my ($hour, $min) = split(/\D/, $duration);

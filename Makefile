@@ -16,6 +16,7 @@ endif
 		-e BASE_DIR=$(CONTAINER_BASE_DIR) \
 		moznion/lambda-perl-layer-foundation:$(CONTAINER_TAG) \
 		$(CONTAINER_BASE_DIR)/build.sh
+	mv func.zip ~/tmp
 
 clean:
 	rm -rf \
