@@ -10,8 +10,8 @@ use IO::Socket::SSL;
 use JSON::Tiny qw(decode_json);
 use Net::Async::HTTP;
 use Net::SSLeay;
-use POSIX       qw(mktime);
-use Time::HiRes qw(time);
+use POSIX         qw(mktime);
+use Time::HiRes   qw(time);
 use Future::Utils qw( fmap_void );
 use strict;
 
@@ -21,7 +21,13 @@ my $year   = shift || (localtime)[5] + 1900;
 my $ics    = new Data::ICal;
 my %URL;
 my %VEVENT;
-my $start = time();
+my $http = Net::Async::HTTP->new(max_connections_per_host => 0);
+my @YEAR = ($year);
+@YEAR = (yyyy0() .. yyyy1()) if scalar(@YEAR) == 0;
+my %START;
+my @FUTURES;
+
+IO::Async::Loop->new()->add($http);
 
 sub get
 {
@@ -29,11 +35,11 @@ sub get
   $url =~ s{^http:}{https:};
   return $URL{$url} if $URL{$url};
   my $start = time;
-  warn ">>> $url\n";
+  warn "GET $url\n";
   my $res     = HTTP::Tiny->new->get($url);
   my $elapsed = int((time - $start) * 1000);
   die "$url: $res->{status}: $res->{reason}" if !$res->{success};
-  warn "<<< $url ($elapsed ms)\n";
+  warn "GET $url ($elapsed ms)\n";
   my $body = $res->{content};
   $body =~ s/\\u\w+//g;
   $body =~ s/&#039;/'/g;
@@ -107,15 +113,6 @@ sub duration
   return '2:00' if $summary =~ m{U-15};
   return '3:00';
 }
-
-my $loop = IO::Async::Loop->new();
-my $http = Net::Async::HTTP->new(max_connections_per_host => 0);
-$loop->add($http);
-
-my @YEAR = ($year);
-@YEAR = (yyyy0() .. yyyy1()) if scalar(@YEAR) == 0;
-my %START;
-my @FUTURES;
 
 foreach my $yyyy (@YEAR)
 {
