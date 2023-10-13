@@ -121,6 +121,7 @@ foreach my $yyyy (@YEAR)
   {
     next if $url !~ m{/events/\d{4}-.*/home$};
     $url =~ s,/home,/schedule-and-results,;
+    next if $START{$url};
     $START{$url} = time;
     warn ">>> $url\n";
     my $future = $http->GET($url)->on_done(
