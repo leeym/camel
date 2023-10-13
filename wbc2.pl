@@ -22,7 +22,9 @@ my %START;
 
 IO::Async::Loop->new()->add($http);
 
-foreach my $year (qw(2006 2009 2013 2017 2023))
+#my @YEAR = qw(2006 2009 2013 2017 2023);
+my @YEAR = qw(2017 2023);
+foreach my $year (@YEAR)
 {
   event($year);
 }
@@ -68,7 +70,8 @@ sub event
             $away, $score, $home, $g->{season}, $g->{description},
           );
           my $epoch = str2time($g->{gameDate});
-          warn $g->{gameDate} . " $summary\n";
+
+          # warn $g->{gameDate} . " $summary\n";
           my $gameday     = 'https://www.mlb.com/gameday/' . $g->{gamePk};
           my $description = "* $gameday \n";
           $description .= "* " . Date::ICal->new(epoch => time)->ical . "\n";
