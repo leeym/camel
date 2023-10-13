@@ -26,11 +26,12 @@ sub get
   my $url = shift;
   $url =~ s{^http:}{https:};
   return $URL{$url} if $URL{$url};
-  my $start   = time;
+  my $start = time;
+  warn "GET $url\n";
   my $res     = $http->get($url);
   my $elapsed = int((time - $start) * 1000);
   die "$url: $res->{status}: $res->{reason}" if !$res->{success};
-  warn "GET $url ($elapsed ms)\n";
+  warn "GOT $url ($elapsed ms)\n";
   my $body = $res->{content};
   $body =~ s/\\u\w+//g;
   $body =~ s/&#039;/'/g;
@@ -163,18 +164,24 @@ sub event
   }
 }
 
-my @YEAR = ($year);
-@YEAR = (yyyy0() .. yyyy1()) if scalar(@YEAR) == 0;
-
-foreach my $yyyy (@YEAR)
+sub events
 {
-  my $html = get("$base/calendar/$yyyy/baseball");
+  my $url  = shift;
+  my $html = get($url);
   foreach my $url ($html =~ m{href="([^"]+)"}g)
   {
     next if $url !~ m{/events/\d{4}-.*/home$};
     $url =~ s,/home,/schedule-and-results,;
     event($url);
   }
+}
+
+my @YEAR = ($year);
+@YEAR = (yyyy0() .. yyyy1()) if scalar(@YEAR) == 0;
+
+foreach my $yyyy (@YEAR)
+{
+  events("$base/calendar/$yyyy/baseball");
 }
 
 END
