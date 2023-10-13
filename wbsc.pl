@@ -21,7 +21,7 @@ my %URL;
 my %VEVENT;
 my $start = time();
 
-sub get
+sub GET
 {
   my $url = shift;
   $url =~ s{^http:}{https:};
@@ -109,7 +109,7 @@ sub duration
 sub event
 {
   my $url  = shift;
-  my $html = get($url);
+  my $html = GET($url);
   my $data = $1 if $html =~ m{data-page="(.*?)">};
   return if !$data;
   $data =~ s{&quot;}{"}g;
@@ -167,7 +167,7 @@ sub event
 sub events
 {
   my $url  = shift;
-  my $html = get($url);
+  my $html = GET($url);
   foreach my $url ($html =~ m{href="([^"]+)"}g)
   {
     next if $url !~ m{/events/\d{4}-.*/home$};

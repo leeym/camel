@@ -17,6 +17,9 @@ endif
 		moznion/lambda-perl-layer-foundation:$(CONTAINER_TAG) \
 		$(CONTAINER_BASE_DIR)/build.sh
 	mv func.zip ~/tmp
+	git status --porcelain | grep ^\? | awk '{print $$NF}' | xargs git add
+	-git commit -am "`git status --porcelain | awk '{print $$NF}' | awk -F/ '{print $$1}' | sort -u | xargs`"
+	git push
 
 clean:
 	rm -rf \

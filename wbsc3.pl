@@ -25,12 +25,12 @@ my $http = Net::Async::HTTP->new(max_connections_per_host => 0);
 my @YEAR = ($year);
 @YEAR = (yyyy0() .. yyyy1()) if scalar(@YEAR) == 0;
 my %START;
-my @FUTURES;
+my @FUTURE;
 my $start = time;
 
 IO::Async::Loop->new()->add($http);
 
-sub get
+sub GET
 {
   my $url = shift;
   $url =~ s{^http:}{https:};
@@ -118,7 +118,7 @@ sub duration
 sub events
 {
   my $url  = shift;
-  my $html = get($url);
+  my $html = GET($url);
   foreach my $url ($html =~ m{href="([^"]+)"}g)
   {
     next if $url !~ m{/events/\d{4}-.*/home$};
@@ -187,7 +187,7 @@ sub events
         }
       }
     );
-    push(@FUTURES, $future);
+    push(@FUTURE, $future);
   }
 }
 
@@ -196,7 +196,7 @@ foreach my $yyyy (@YEAR)
   events("$base/calendar/$yyyy/baseball");
 }
 
-foreach my $future (@FUTURES)
+foreach my $future (@FUTURE)
 {
   await $future->get();
 }
