@@ -1,0 +1,49 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:Data::ICal 0.24
+BEGIN:VEVENT
+DESCRIPTION:* https://www.mlb.com/gameday/719534 \n* 20231013T070805Z\n
+DTSTART:20230312T040000Z
+DURATION:PT3H0M
+LAST-MODIFIED:20231013T070805Z
+LOCATION:Taichung Intercontinental Baseball Stadium\, No. 835\, Section 3\,
+  Chongde Rd\, Beitun District\, Taichung\, Taiwan
+SUMMARY:#9 Taiwan 1:7 Cuba | World Baseball Classic 2023 - Pool A Game 9
+UID:719534
+URL:https://www.mlb.com/gameday/719534
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:* https://www.mlb.com/gameday/719537 \n* 20231013T070805Z\n
+DTSTART:20230311T110000Z
+DURATION:PT3H0M
+LAST-MODIFIED:20231013T070805Z
+LOCATION:Taichung Intercontinental Baseball Stadium\, No. 835\, Section 3\,
+  Chongde Rd\, Beitun District\, Taichung\, Taiwan
+SUMMARY:#8 Netherlands 5:9 Taiwan | World Baseball Classic 2023 - Pool A Ga
+ me 8
+UID:719537
+URL:https://www.mlb.com/gameday/719537
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:* https://www.mlb.com/gameday/719540 \n* 20231013T070805Z\n
+DTSTART:20230310T110000Z
+DURATION:PT3H0M
+LAST-MODIFIED:20231013T070805Z
+LOCATION:Taichung Intercontinental Baseball Stadium\, No. 835\, Section 3\,
+  Chongde Rd\, Beitun District\, Taichung\, Taiwan
+SUMMARY:#6 Italy 7:11 Taiwan | World Baseball Classic 2023 - Pool A Game 6
+UID:719540
+URL:https://www.mlb.com/gameday/719540
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:* https://www.mlb.com/gameday/719543 \n* 20231013T070805Z\n
+DTSTART:20230308T110000Z
+DURATION:PT3H0M
+LAST-MODIFIED:20231013T070805Z
+LOCATION:Taichung Intercontinental Baseball Stadium\, No. 835\, Section 3\,
+  Chongde Rd\, Beitun District\, Taichung\, Taiwan
+SUMMARY:#2 Panama 12:5 Taiwan | World Baseball Classic 2023 - Pool A Game 2
+UID:719543
+URL:https://www.mlb.com/gameday/719543
+END:VEVENT
+END:VCALENDAR
