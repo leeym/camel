@@ -22,8 +22,7 @@ my %START;
 
 IO::Async::Loop->new()->add($http);
 
-#my @YEAR = qw(2006 2009 2013 2017 2023);
-my @YEAR = qw(2017 2023);
+my @YEAR = qw(2006 2009 2012 2013 2017 2023);
 foreach my $year (@YEAR)
 {
   event($year);
