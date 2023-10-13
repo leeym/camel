@@ -26,6 +26,7 @@ my @YEAR = ($year);
 @YEAR = (yyyy0() .. yyyy1()) if scalar(@YEAR) == 0;
 my %START;
 my @FUTURES;
+my $start = time;
 
 IO::Async::Loop->new()->add($http);
 
@@ -202,10 +203,12 @@ foreach my $future (@FUTURES)
 
 END
 {
-  warn "\nTotal: " . scalar(keys %VEVENT) . " events\n\n";
   foreach my $id (sort { $a <=> $b } keys %VEVENT)
   {
     $ics->add_entry($VEVENT{$id});
   }
   print $ics->as_string;
+  warn "\n";
+  warn "Total: " . scalar(keys %VEVENT) . " events\n";
+  warn "Duration: " . int((time - $start) * 1000) . " ms\n";
 }

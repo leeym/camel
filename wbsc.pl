@@ -186,10 +186,12 @@ foreach my $yyyy (@YEAR)
 
 END
 {
-  warn "\nTotal: " . scalar(keys %VEVENT) . " events\n\n";
   foreach my $id (sort { $a <=> $b } keys %VEVENT)
   {
     $ics->add_entry($VEVENT{$id});
   }
   print $ics->as_string;
+  warn "\n";
+  warn "Total: " . scalar(keys %VEVENT) . " events\n";
+  warn "Duration: " . int((time - $start) * 1000) . " ms\n";
 }
