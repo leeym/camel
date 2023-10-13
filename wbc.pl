@@ -20,7 +20,7 @@ my %URL;
 my %VEVENT;
 my $start = time();
 
-foreach my $year (qw(2006 2009 2013 2017 2023))
+foreach my $year (qw(2023))
 {
   event($year);
 }
