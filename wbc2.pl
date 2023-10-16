@@ -24,9 +24,41 @@ my %START;
 
 IO::Async::Loop->new()->add($http);
 
-foreach my $year (@YEAR)
+foreach my $year (reverse sort @YEAR)
 {
   event($year);
+}
+
+foreach my $future (@FUTURE)
+{
+  last if int((time - $start) * 1000) >= 25000;
+  await $future->get();
+}
+
+END
+{
+  foreach my $vevent (sort { dtstart($a) <=> dtstart($b) } values %VEVENT)
+  {
+    $ics->add_entry($vevent);
+  }
+  print $ics->as_string;
+  warn "\n";
+  warn "Total: " . scalar(keys %VEVENT) . " events\n";
+  warn "Duration: " . int((time - $start) * 1000) . " ms\n";
+}
+
+sub venue
+{
+  my $v = shift;
+  my $l = $v->{location};
+  return sprintf('%s, %s, %s, %s, %s',
+    $v->{name}, $l->{address1}, $l->{address2}, $l->{city}, $l->{country});
+}
+
+sub dtstart
+{
+  my $vevent = shift;
+  return $vevent->{properties}{'dtstart'}[0]->{value};
 }
 
 sub event
@@ -112,35 +144,4 @@ sub event
     }
   );
   push(@FUTURE, $future);
-}
-
-foreach my $future (@FUTURE)
-{
-  await $future->get();
-}
-
-sub venue
-{
-  my $v = shift;
-  my $l = $v->{location};
-  return sprintf('%s, %s, %s, %s, %s',
-    $v->{name}, $l->{address1}, $l->{address2}, $l->{city}, $l->{country});
-}
-
-sub dtstart
-{
-  my $vevent = shift;
-  return $vevent->{properties}{'dtstart'}[0]->{value};
-}
-
-END
-{
-  foreach my $vevent (sort { dtstart($a) <=> dtstart($b) } values %VEVENT)
-  {
-    $ics->add_entry($vevent);
-  }
-  print $ics->as_string;
-  warn "\n";
-  warn "Total: " . scalar(keys %VEVENT) . " events\n";
-  warn "Duration: " . int((time - $start) * 1000) . " ms\n";
 }
