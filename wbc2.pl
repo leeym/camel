@@ -31,7 +31,7 @@ foreach my $year (reverse sort @YEAR)
 
 foreach my $future (@FUTURE)
 {
-  last if int((time - $start) * 1000) >= 25000;
+  last if int((time - $start) * 1000) >= 20000;
   await $future->get();
 }
 
