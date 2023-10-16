@@ -1,5 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
+use strict;
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
@@ -11,7 +12,7 @@ use JSON::Tiny qw(decode_json);
 use Net::SSLeay;
 use POSIX       qw(mktime);
 use Time::HiRes qw(time);
-use strict;
+use URL::Builder;
 
 my $ics  = new Data::ICal;
 my $http = new HTTP::Tiny;
@@ -20,8 +21,7 @@ my %URL;
 my %VEVENT;
 my $start = time();
 
-#my @YEAR = qw(2006 2009 2013 2017 2023);
-my @YEAR = qw(2023);
+my @YEAR = qw(2006 2009 2012 2013 2017 2023);
 foreach my $year (@YEAR)
 {
   event($year);
@@ -50,8 +50,27 @@ sub GET
 sub event
 {
   my $year = shift;
-  my $url =
-"https://bdfed.stitch.mlbinfra.com/bdfed/transform-mlb-schedule?stitch_env=prod&sortTemplate=5&sportId=51&startDate=$year-01-01&endDate=$year-12-31&gameType=S&&gameType=R&&gameType=F&&gameType=D&&gameType=L&&gameType=W&&gameType=A&language=en&leagueId=159&&leagueId=160&contextTeamId=";
+  my $url  = build_url(
+    base_uri => 'https://bdfed.stitch.mlbinfra.com',
+    path     => '/bdfed/transform-mlb-schedule',
+    query    => [
+      stitch_env   => 'prod',
+      sortTemplate => 5,
+      sportId      => 51,
+      startDate    => "$year-01-01",
+      endDate      => "$year-12-31",
+      gameType     => 'A',
+      gameType     => 'D',
+      gameType     => 'F',
+      gameType     => 'L',
+      gameType     => 'R',
+      gameType     => 'S',
+      gameType     => 'W',
+      language     => 'en',
+      leagueId     => 159,
+      leagueId     => 160,
+    ],
+  );
   my $json = GET($url);
   my $data = decode_json($json);
   foreach my $date (@{ $data->{dates} })
@@ -109,11 +128,17 @@ sub venue
     $v->{name}, $l->{address1}, $l->{address2}, $l->{city}, $l->{country});
 }
 
+sub dtstart
+{
+  my $vevent = shift;
+  return $vevent->{properties}{'dtstart'}[0]->{value};
+}
+
 END
 {
-  foreach my $id (sort { $a <=> $b } keys %VEVENT)
+  foreach my $vevent (sort { dtstart($a) <=> dtstart($b) } values %VEVENT)
   {
-    $ics->add_entry($VEVENT{$id});
+    $ics->add_entry($vevent);
   }
   print $ics->as_string;
   warn "\n";
