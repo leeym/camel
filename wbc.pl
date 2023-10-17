@@ -22,9 +22,10 @@ my %VEVENT;
 my $start = time();
 
 my @YEAR = qw(2006 2009 2012 2013 2017 2023);
-foreach my $year (@YEAR)
+foreach my $year (reverse sort @YEAR)
 {
   event($year);
+  last if (time - $start) >= 20;
 }
 
 sub GET
@@ -32,12 +33,11 @@ sub GET
   my $url = shift;
   $url =~ s{^http:}{https:};
   return $URL{$url} if $URL{$url};
-  my $start = time;
-  warn "GET $url\n";
+  my $start   = time;
   my $res     = $http->get($url);
   my $elapsed = int((time - $start) * 1000);
   die "$url: $res->{status}: $res->{reason}" if !$res->{success};
-  warn "GOT $url ($elapsed ms)\n";
+  warn "GET $url ($elapsed ms)\n";
   my $body = $res->{content};
   $body =~ s/\\u\w+//g;
   $body =~ s/&#039;/'/g;
