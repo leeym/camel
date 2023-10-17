@@ -16,7 +16,11 @@ use strict;
 
 my @YEAR = qw(2006 2009 2012 2013 2017 2023);
 my $ics  = new Data::ICal;
-my $http = Net::Async::HTTP->new(max_connections_per_host => scalar(@YEAR));
+my $http = Net::Async::HTTP->new(
+  max_connections_per_host => scalar(@YEAR),
+  max_in_flight            => 0,
+  timeout                  => 10,
+);
 my %VEVENT;
 my $start = time();
 my @FUTURE;
@@ -31,7 +35,6 @@ foreach my $year (reverse sort @YEAR)
 
 foreach my $future (@FUTURE)
 {
-  last if int((time - $start) * 1000) >= 20000;
   await $future->get();
 }
 
@@ -94,9 +97,9 @@ sub event
       my $response = shift;
       my $url      = $response->request->url;
       my $elapsed  = int((time - $START{$url}) * 1000);
-      warn "got $url ($elapsed ms)\n";
-      my $json = $response->content;
-      my $data = decode_json($json);
+      my $json     = $response->content;
+      my $data     = decode_json($json);
+      my $n        = 0;
       foreach my $date (@{ $data->{dates} })
       {
         next if $date->{totalGames} == 0;
@@ -139,8 +142,10 @@ sub event
             url             => $gameday,
           );
           $VEVENT{ $g->{gamePk} } = $vevent;
+          $n++;
         }
       }
+      warn "got $url ($n events, $elapsed ms)\n";
     }
   );
   push(@FUTURE, $future);
