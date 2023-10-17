@@ -31,11 +31,12 @@ IO::Async::Loop->new()->add($http);
 foreach my $year (reverse sort @YEAR)
 {
   event($year);
-  sleep(0.1);
+  sleep(0.5);
 }
 
 foreach my $year (reverse sort keys %FUTURE)
 {
+  warn "await $year\n";
   my $future = $FUTURE{$year};
   await $future->get();
 }
