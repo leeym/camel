@@ -10,7 +10,7 @@ use JSON::Tiny qw(decode_json);
 use Net::Async::HTTP;
 use Net::SSLeay;
 use POSIX       qw(mktime);
-use Time::HiRes qw(time);
+use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
 
@@ -19,11 +19,11 @@ my $ics  = new Data::ICal;
 my $http = Net::Async::HTTP->new(
   max_connections_per_host => scalar(@YEAR),
   max_in_flight            => 0,
-  timeout                  => 20,
+  timeout                  => 15,
 );
 my %VEVENT;
 my $start = time();
-my @FUTURE;
+my %FUTURE;
 my %START;
 
 IO::Async::Loop->new()->add($http);
@@ -31,10 +31,12 @@ IO::Async::Loop->new()->add($http);
 foreach my $year (reverse sort @YEAR)
 {
   event($year);
+  sleep(0.1);
 }
 
-foreach my $future (@FUTURE)
+foreach my $year (reverse sort keys %FUTURE)
 {
+  my $future = $FUTURE{$year};
   await $future->get();
 }
 
@@ -149,5 +151,5 @@ sub event
       warn "got $url ($n events, $elapsed ms)\n";
     }
   );
-  push(@FUTURE, $future);
+  $FUTURE{$year} = $future;
 }
