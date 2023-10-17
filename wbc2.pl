@@ -48,6 +48,7 @@ END
   warn "\n";
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
+  exit(0);
 }
 
 sub venue
