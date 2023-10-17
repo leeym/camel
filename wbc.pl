@@ -19,15 +19,15 @@ my $http = new HTTP::Tiny;
 my $base = 'https://www.mlb.com/world-baseball-classic/schedule';
 my %URL;
 my %VEVENT;
-my $start = time();
+my $mainStart = time();
 
-warn "main start: $start\n";
+warn "main start: $mainStart\n";
 
 my @YEAR = qw(2006 2009 2012 2013 2017 2023);
 foreach my $year (reverse sort @YEAR)
 {
   event($year);
-  last if (time - $start) >= 20;
+  last if (time - $mainStart) >= 20;
 }
 
 sub GET
@@ -35,9 +35,9 @@ sub GET
   my $url = shift;
   $url =~ s{^http:}{https:};
   return $URL{$url} if $URL{$url};
-  my $start   = time;
-  my $res     = $http->get($url);
-  my $elapsed = int((time - $start) * 1000);
+  my $funcStart = time;
+  my $res       = $http->get($url);
+  my $elapsed   = int((time - $funcStart) * 1000);
   die "$url: $res->{status}: $res->{reason}" if !$res->{success};
   warn "GET $url ($elapsed ms)\n";
   my $body = $res->{content};
@@ -51,9 +51,9 @@ sub GET
 
 sub event
 {
-  my $year  = shift;
-  my $start = time;
-  warn "event($year) start: $start\n";
+  my $year      = shift;
+  my $funcStart = time;
+  warn "event($year) start: $funcStart\n";
   my $url = build_url(
     base_uri => 'https://bdfed.stitch.mlbinfra.com',
     path     => '/bdfed/transform-mlb-schedule',
@@ -79,6 +79,7 @@ sub event
   my $data = decode_json($json);
   foreach my $date (@{ $data->{dates} })
   {
+    my $dateStart = time;
     next if $date->{totalGames} == 0;
     foreach my $g (@{ $date->{games} })
     {
@@ -120,9 +121,12 @@ sub event
       );
       $VEVENT{ $g->{gamePk} } = $vevent;
     }
+    warn "date "
+      . $date->{date} . " "
+      . int((time - $dateStart) * 1000) . " ms\n";
   }
   my $end     = time;
-  my $elapsed = int(($end - $start) * 1000);
+  my $elapsed = int(($end - $funcStart) * 1000);
   warn "event($year) end: $end, duration: $elapsed ms\n";
 }
 
@@ -150,6 +154,6 @@ END
   my $end = time;
   warn "\n";
   warn "main end: $end\n";
-  warn "Duration: " . int(($end - $start) * 1000) . " ms\n";
+  warn "Duration: " . int(($end - $mainStart) * 1000) . " ms\n";
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
 }
