@@ -19,7 +19,7 @@ my $ics  = new Data::ICal;
 my $http = Net::Async::HTTP->new(
   max_connections_per_host => scalar(@YEAR),
   max_in_flight            => 0,
-  timeout                  => 10,
+  timeout                  => 20,
 );
 my %VEVENT;
 my $start = time();
