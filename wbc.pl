@@ -17,7 +17,7 @@ use strict;
 my @YEAR = qw(2006 2009 2012 2013 2017 2023);
 my $ics  = new Data::ICal;
 my $http = Net::Async::HTTP->new(
-  max_connections_per_host => scalar(@YEAR),
+  max_connections_per_host => 0,
   max_in_flight            => 0,
   timeout                  => 20,
 );
@@ -31,7 +31,6 @@ IO::Async::Loop->new()->add($http);
 foreach my $year (reverse sort @YEAR)
 {
   event($year);
-  sleep(0.1);
 }
 
 foreach my $year (reverse sort keys %FUTURE)

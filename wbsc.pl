@@ -21,7 +21,12 @@ my $year   = shift || (localtime)[5] + 1900;
 my $ics    = new Data::ICal;
 my %URL;
 my %VEVENT;
-my $http = Net::Async::HTTP->new(max_connections_per_host => 0);
+my $http = Net::Async::HTTP->new(
+  max_connections_per_host => 0,
+  max_in_flight            => 0,
+  timeout                  => 20,
+);
+
 my @YEAR = ($year);
 @YEAR = (yyyy0() .. yyyy1()) if scalar(@YEAR) == 0;
 my %START;
