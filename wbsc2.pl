@@ -7,7 +7,7 @@ use Date::ICal;
 use HTTP::Tiny;
 use IO::Async::SSL;
 use IO::Socket::SSL;
-use JSON::Tiny qw(decode_json);
+use JSON::XS qw(decode_json);
 use Net::Async::HTTP;
 use Net::SSLeay;
 use POSIX         qw(mktime);

@@ -6,7 +6,7 @@ use Data::ICal;
 use Date::ICal;
 use HTTP::Tiny;
 use IO::Socket::SSL;
-use JSON::Tiny qw(decode_json);
+use JSON::XS qw(decode_json);
 use Net::SSLeay;
 use POSIX       qw(mktime);
 use Time::HiRes qw(time);

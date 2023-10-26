@@ -10,7 +10,7 @@ use utf8;
 use Capture::Tiny ':all';
 use Data::Dumper;
 use HTTP::Tiny;
-use JSON::Tiny qw/decode_json encode_json/;
+use JSON::XS qw/decode_json encode_json/;
 
 die "$0 only works in AWS Lambda\n" if !$ENV{AWS_LAMBDA_RUNTIME_API};
 
