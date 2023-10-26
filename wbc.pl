@@ -21,8 +21,6 @@ my %URL;
 my %VEVENT;
 my $mainStart = time();
 
-warn "main start: $mainStart\n";
-
 my @YEAR = qw(2006 2009 2012 2013 2017 2023);
 foreach my $year (reverse sort @YEAR)
 {
@@ -53,8 +51,7 @@ sub event
 {
   my $year      = shift;
   my $funcStart = time;
-  warn "event($year) start: $funcStart\n";
-  my $url = build_url(
+  my $url       = build_url(
     base_uri => 'https://bdfed.stitch.mlbinfra.com',
     path     => '/bdfed/transform-mlb-schedule',
     query    => [
@@ -75,11 +72,12 @@ sub event
       leagueId     => 160,
     ],
   );
-  my $json = GET($url);
-  my $data = decode_json($json);
+  my $json        = GET($url);
+  my $decodeStart = time;
+  my $data        = decode_json($json);
+  warn "decode_json: " . int((time - $decodeStart) * 1000) . " ms\n";
   foreach my $date (@{ $data->{dates} })
   {
-    my $dateStart = time;
     next if $date->{totalGames} == 0;
     foreach my $g (@{ $date->{games} })
     {
@@ -121,13 +119,9 @@ sub event
       );
       $VEVENT{ $g->{gamePk} } = $vevent;
     }
-    warn "date "
-      . $date->{date} . " "
-      . int((time - $dateStart) * 1000) . " ms\n";
   }
-  my $end     = time;
-  my $elapsed = int(($end - $funcStart) * 1000);
-  warn "event($year) end: $end, duration: $elapsed ms\n";
+  my $elapsed = int((time - $funcStart) * 1000);
+  warn "event($year): $elapsed ms\n";
 }
 
 sub venue
@@ -151,9 +145,7 @@ END
     $ics->add_entry($vevent);
   }
   print $ics->as_string;
-  my $end = time;
   warn "\n";
-  warn "main end: $end\n";
-  warn "Duration: " . int(($end - $mainStart) * 1000) . " ms\n";
+  warn "Duration: " . int((time - $mainStart) * 1000) . " ms\n";
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
 }
