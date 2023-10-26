@@ -4,7 +4,6 @@ use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
 use Date::ICal;
-use HTTP::Tiny;
 use IO::Async::SSL;
 use IO::Socket::SSL;
 use JSON::XS qw(decode_json);
@@ -15,8 +14,7 @@ use Time::HiRes   qw(time);
 use Future::Utils qw( fmap_void );
 use strict;
 
-my $year = shift || (localtime)[5] + 1900;
-my $ics  = new Data::ICal;
+my $ics = new Data::ICal;
 my %URL;
 my %VEVENT;
 my $http = Net::Async::HTTP->new(
@@ -24,32 +22,17 @@ my $http = Net::Async::HTTP->new(
   max_in_flight            => 0,
   timeout                  => 20,
 );
-my @YEAR = ($year);
-@YEAR = (yyyy0() .. yyyy1()) if scalar(@YEAR) == 0;
 my %START;
-my @FUTURE;
+my @FUTURE1;
+my @FUTURE2;
 my $start = time;
 
 IO::Async::Loop->new()->add($http);
 
-sub GET
+sub by_year
 {
-  my $url = shift;
-  $url =~ s{^http:}{https:};
-  return $URL{$url} if $URL{$url};
-  my $start = time;
-  warn "GET $url\n";
-  my $res     = HTTP::Tiny->new->get($url);
-  my $elapsed = int((time - $start) * 1000);
-  die "$url: $res->{status}: $res->{reason}" if !$res->{success};
-  warn "GOT $url ($elapsed ms)\n";
-  my $body = $res->{content};
-  $body =~ s/\\u\w+//g;
-  $body =~ s/&#039;/'/g;
-  $body =~ s/\r//g;
-  $body =~ s/\n//g;
-  $URL{$url} = $body;
-  return $body;
+  return -1 if $a == ((localtime)[5] + 1900);
+  return $b <=> $a;
 }
 
 sub mmdd
@@ -101,12 +84,12 @@ sub boxscore
 
 sub yyyy0
 {
-  return (localtime)[5] + 1900 - (((localtime)[4] + 1) <= 3 ? 1 : 0);
+  return (localtime)[5] + 1900 - 1;
 }
 
 sub yyyy1
 {
-  return (localtime)[5] + 1900 + (((localtime)[4] + 1) >= 10 ? 1 : 0);
+  return (localtime)[5] + 1900 + 1;
 }
 
 sub duration
@@ -117,91 +100,115 @@ sub duration
   return '3:00';
 }
 
-sub events
+sub year
 {
-  my $url  = shift;
-  my $html = GET($url);
-  foreach my $url ($html =~ m{href="([^"]+)"}g)
-  {
-    next if $url !~ m{/events/\d{4}-.*/home$};
-    $url =~ s,/home,/schedule-and-results,;
-    next if $START{$url};
-    $START{$url} = time;
-    warn "get $url\n";
-    my $future = $http->GET($url)->on_done(
-      sub {
-        my $response = shift;
-        my $url      = $response->request->url;
-        my $html     = $response->content;
-        my $data     = $1 if $html =~ m{data-page="(.*?)">};
-        return if !$data;
-        my $elapsed = int((time - $START{$url}) * 1000);
-        warn "got $url ($elapsed ms)\n";
-        $data =~ s{&quot;}{"}g;
-        my $d = decode_json($data);
-        my $t = $d->{props}->{tournament};
-
-        foreach my $g (@{ $d->{props}->{games} })
-        {
-          next if $VEVENT{ $g->{id} };
-          next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
-          $ENV{TZ} = tz($g, $t);
-          my $score = "$g->{awayruns}:$g->{homeruns}";
-          $score = 'vs' if $score eq '0:0';
-          my $away    = "$g->{awaylabel}";
-          my $home    = "$g->{homelabel}";
-          my $summary = "#$g->{gamenumber} $away $score $home";
-          $summary .= " | $t->{tournamentname}";
-          $summary .= " - $g->{gametypelabel}";
-          $summary =~ s{Chinese Taipei}{Taiwan};
-          my $start = $g->{start};
-
-          if ($g->{gamestart})
-          {
-            $start = (split(' ', $start))[0] . ' ' . $g->{gamestart};
-          }
-          my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
-
-          # warn "$yyyy-$mm-$dd $HH:$MM ($ENV{TZ}) $summary\n";
-          my $dtstart  = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
-          my $duration = $g->{duration} || duration($summary);
-          my ($hour, $min) = split(/\D/, $duration);
-          $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
-          my $standings = $url;
-          $standings =~ s,schedule-and-results,standings,;
-          my $description;
-          $description .= "* " . $standings . "\n";
-          $description .= "* " . boxscore($url, $g) . "\n";
-          $description .= "* " . $g->{gamevideo} . "\n" if $g->{gamevideo};
-          $description .= "* " . Date::ICal->new(epoch => time)->ical;
-          my $vevent = Data::ICal::Entry::Event->new();
-          $vevent->add_properties(
-            description     => $description,
-            dtstart         => Date::ICal->new(epoch => $dtstart)->ical,
-            duration        => $duration,
-            'last-modified' => Date::ICal->new(epoch => time)->ical,
-            location        => $g->{stadium} . ', ' . $g->{location},
-            summary         => $summary,
-            uid             => $g->{id},
-            url             => boxscore($url, $g),
-          );
-          $VEVENT{ $g->{id} } = $vevent;
-        }
+  my $url = shift;
+  return if $START{$url};
+  $START{$url} = time;
+  warn "get year $url\n";
+  my $future = $http->GET($url)->on_done(
+    sub {
+      my $response = shift;
+      my $url      = $response->request->url;
+      my $html     = $response->content;
+      my $elapsed  = int((time - $START{$url}) * 1000);
+      warn "got year $url ($elapsed ms)\n";
+      foreach my $url ($html =~ m{href="([^"]+)"}g)
+      {
+        next if $url !~ m{/events/\d{4}-.*/home$};
+        $url =~ s,/home,/schedule-and-results,;
+        next if $START{$url};
+        events($url);
       }
-    );
-    push(@FUTURE, $future);
-  }
+    }
+  );
+  push(@FUTURE1, $future);
 }
 
-foreach my $yyyy (reverse sort @YEAR)
+sub events
+{
+  my $url = shift;
+  return if $START{$url};
+  $START{$url} = time;
+  warn "get events $url\n";
+  my $future = $http->GET($url)->on_done(
+    sub {
+      my $response = shift;
+      my $url      = $response->request->url;
+      my $html     = $response->content;
+      my $data     = $1 if $html =~ m{data-page="(.*?)">};
+      return if !$data;
+      my $elapsed = int((time - $START{$url}) * 1000);
+      warn "got events $url ($elapsed ms)\n";
+      $data =~ s{&quot;}{"}g;
+      my $d = decode_json($data);
+      my $t = $d->{props}->{tournament};
+
+      foreach my $g (@{ $d->{props}->{games} })
+      {
+        next if $VEVENT{ $g->{id} };
+        next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
+        $ENV{TZ} = tz($g, $t);
+        my $score = "$g->{awayruns}:$g->{homeruns}";
+        $score = 'vs' if $score eq '0:0';
+        my $away    = "$g->{awaylabel}";
+        my $home    = "$g->{homelabel}";
+        my $summary = "#$g->{gamenumber} $away $score $home";
+        $summary .= " | $t->{tournamentname}";
+        $summary .= " - $g->{gametypelabel}";
+        $summary =~ s{Chinese Taipei}{Taiwan};
+        my $start = $g->{start};
+
+        if ($g->{gamestart})
+        {
+          $start = (split(' ', $start))[0] . ' ' . $g->{gamestart};
+        }
+        my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
+
+        # warn "$yyyy-$mm-$dd $HH:$MM ($ENV{TZ}) $summary\n";
+        my $dtstart  = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+        my $duration = $g->{duration} || duration($summary);
+        my ($hour, $min) = split(/\D/, $duration);
+        $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
+        my $standings = $url;
+        $standings =~ s,schedule-and-results,standings,;
+        my $description;
+        $description .= "* " . $standings . "\n";
+        $description .= "* " . boxscore($url, $g) . "\n";
+        $description .= "* " . $g->{gamevideo} . "\n" if $g->{gamevideo};
+        $description .= "* " . Date::ICal->new(epoch => time)->ical;
+        my $vevent = Data::ICal::Entry::Event->new();
+        $vevent->add_properties(
+          description     => $description,
+          dtstart         => Date::ICal->new(epoch => $dtstart)->ical,
+          duration        => $duration,
+          'last-modified' => Date::ICal->new(epoch => time)->ical,
+          location        => $g->{stadium} . ', ' . $g->{location},
+          summary         => $summary,
+          uid             => $g->{id},
+          url             => boxscore($url, $g),
+        );
+        $VEVENT{ $g->{id} } = $vevent;
+      }
+    }
+  );
+  push(@FUTURE2, $future);
+}
+
+foreach my $yyyy (sort by_year (yyyy0() .. yyyy1()))
 {
   foreach my $domain ('wbsc', 'wbscasia')
   {
-    events("http://www.$domain.org/calendar/$yyyy/baseball");
+    year("https://www.$domain.org/en/calendar/$yyyy/baseball");
   }
 }
 
-foreach my $future (@FUTURE)
+foreach my $future (@FUTURE1)
+{
+  await $future->get();
+}
+
+foreach my $future (@FUTURE2)
 {
   await $future->get();
 }
