@@ -19,7 +19,7 @@ my $ics  = new Data::ICal;
 my $http = Net::Async::HTTP->new(
   max_connections_per_host => scalar(@YEAR),
   max_in_flight            => 0,
-  timeout                  => 15,
+  timeout                  => 20,
 );
 my %VEVENT;
 my $start = time();
@@ -31,7 +31,7 @@ IO::Async::Loop->new()->add($http);
 foreach my $year (reverse sort @YEAR)
 {
   event($year);
-  sleep(0.5);
+  sleep(0.1);
 }
 
 foreach my $year (reverse sort keys %FUTURE)
