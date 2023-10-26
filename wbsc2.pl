@@ -197,7 +197,7 @@ foreach my $yyyy (reverse sort @YEAR)
 {
   foreach my $domain ('wbsc', 'wbscasia')
   {
-    events("http://www.$domain.org/calendar/$yyyy");
+    events("http://www.$domain.org/calendar/$yyyy/baseball");
   }
 }
 
