@@ -193,7 +193,7 @@ sub events
 
 foreach my $yyyy (@YEAR)
 {
-  events("$base/calendar/$yyyy/baseball");
+  events("$base/calendar/$yyyy");
 }
 
 foreach my $future (@FUTURE)

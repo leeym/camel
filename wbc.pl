@@ -1,57 +1,77 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
-use strict;
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
 use Date::ICal;
 use Date::Parse;
-use HTTP::Tiny;
 use IO::Socket::SSL;
 use JSON::XS qw(decode_json);
+use Net::Async::HTTP;
 use Net::SSLeay;
 use POSIX       qw(mktime);
-use Time::HiRes qw(time);
+use Time::HiRes qw(time sleep);
 use URL::Builder;
-
-my $ics  = new Data::ICal;
-my $http = new HTTP::Tiny;
-my $base = 'https://www.mlb.com/world-baseball-classic/schedule';
-my %URL;
-my %VEVENT;
-my $mainStart = time();
+use strict;
 
 my @YEAR = qw(2006 2009 2012 2013 2017 2023);
+my $ics  = new Data::ICal;
+my $http = Net::Async::HTTP->new(
+  max_connections_per_host => scalar(@YEAR),
+  max_in_flight            => 0,
+  timeout                  => 20,
+);
+my %VEVENT;
+my $start = time();
+my %FUTURE;
+my %START;
+
+IO::Async::Loop->new()->add($http);
+
 foreach my $year (reverse sort @YEAR)
 {
   event($year);
-  last if (time - $mainStart) >= 20;
+  sleep(0.1);
 }
 
-sub GET
+foreach my $year (reverse sort keys %FUTURE)
 {
-  my $url = shift;
-  $url =~ s{^http:}{https:};
-  return $URL{$url} if $URL{$url};
-  my $funcStart = time;
-  my $res       = $http->get($url);
-  my $elapsed   = int((time - $funcStart) * 1000);
-  die "$url: $res->{status}: $res->{reason}" if !$res->{success};
-  warn "GET $url ($elapsed ms)\n";
-  my $body = $res->{content};
-  $body =~ s/\\u\w+//g;
-  $body =~ s/&#039;/'/g;
-  $body =~ s/\r//g;
-  $body =~ s/\n//g;
-  $URL{$url} = $body;
-  return $body;
+  warn "await $year\n";
+  my $future = $FUTURE{$year};
+  await $future->get();
+}
+
+END
+{
+  foreach my $vevent (sort { dtstart($a) <=> dtstart($b) } values %VEVENT)
+  {
+    $ics->add_entry($vevent);
+  }
+  print $ics->as_string;
+  warn "\n";
+  warn "Total: " . scalar(keys %VEVENT) . " events\n";
+  warn "Duration: " . int((time - $start) * 1000) . " ms\n";
+  exit(0);
+}
+
+sub venue
+{
+  my $v = shift;
+  my $l = $v->{location};
+  return sprintf('%s, %s, %s, %s, %s',
+    $v->{name}, $l->{address1}, $l->{address2}, $l->{city}, $l->{country});
+}
+
+sub dtstart
+{
+  my $vevent = shift;
+  return $vevent->{properties}{'dtstart'}[0]->{value};
 }
 
 sub event
 {
-  my $year      = shift;
-  my $funcStart = time;
-  my $url       = build_url(
+  my $year = shift;
+  my $url  = build_url(
     base_uri => 'https://bdfed.stitch.mlbinfra.com',
     path     => '/bdfed/transform-mlb-schedule',
     query    => [
@@ -72,80 +92,65 @@ sub event
       leagueId     => 160,
     ],
   );
-  my $json        = GET($url);
-  my $decodeStart = time;
-  my $data        = decode_json($json);
-  warn "decode_json: " . int((time - $decodeStart) * 1000) . " ms\n";
-  foreach my $date (@{ $data->{dates} })
-  {
-    next if $date->{totalGames} == 0;
-    foreach my $g (@{ $date->{games} })
-    {
-      next if $VEVENT{ $g->{gamePk} };
-      my $tpe  = 'Chinese Taipei';
-      my $twn  = 'Taiwan';
-      my $away = $g->{teams}->{away}->{team}->{teamName};
-      my $home = $g->{teams}->{home}->{team}->{teamName};
-      next if $away ne $tpe && $home ne $tpe;
-      $away = $twn if $away eq $tpe;
-      $home = $twn if $home eq $tpe;
 
-      # warn Dumper($g);
-      my $score = sprintf('%d:%d',
-        $g->{teams}->{away}->{score},
-        $g->{teams}->{home}->{score});
-      $score = 'vs' if $score eq '0:0';
-      my $summary = sprintf(
-        "#%d %s %s %s | World Baseball Classic %d - %s",
-        $g->{seriesGameNumber},
-        $away, $score, $home, $g->{season}, $g->{description},
-      );
-      my $epoch = str2time($g->{gameDate});
+  return if $START{$url};
+  $START{$url} = time;
+  warn "get $url\n";
+  my $future = $http->GET($url)->on_done(
+    sub {
+      my $response = shift;
+      my $url      = $response->request->url;
+      my $elapsed  = int((time - $START{$url}) * 1000);
+      my $json     = $response->content;
+      my $data     = decode_json($json);
+      my $n        = 0;
+      foreach my $date (@{ $data->{dates} })
+      {
+        next if $date->{totalGames} == 0;
+        foreach my $g (@{ $date->{games} })
+        {
+          next if $VEVENT{ $g->{gamePk} };
+          my $tpe  = 'Chinese Taipei';
+          my $twn  = 'Taiwan';
+          my $away = $g->{teams}->{away}->{team}->{teamName};
+          my $home = $g->{teams}->{home}->{team}->{teamName};
+          next if $away ne $tpe && $home ne $tpe;
+          $away = $twn if $away eq $tpe;
+          $home = $twn if $home eq $tpe;
 
-      # warn $g->{gameDate} . " $summary\n";
-      my $gameday     = 'https://www.mlb.com/gameday/' . $g->{gamePk};
-      my $description = "* $gameday \n";
-      $description .= "* " . Date::ICal->new(epoch => time)->ical . "\n";
-      my $vevent = Data::ICal::Entry::Event->new();
-      $vevent->add_properties(
-        description     => $description,
-        dtstart         => Date::ICal->new(epoch => $epoch)->ical,
-        duration        => 'PT3H0M',
-        'last-modified' => Date::ICal->new(epoch => time)->ical,
-        location        => venue($g->{venue}),
-        summary         => $summary,
-        uid             => $g->{gamePk},
-        url             => $gameday,
-      );
-      $VEVENT{ $g->{gamePk} } = $vevent;
+          # warn Dumper($g);
+          my $score = sprintf('%d:%d',
+            $g->{teams}->{away}->{score},
+            $g->{teams}->{home}->{score});
+          $score = 'vs' if $score eq '0:0';
+          my $summary = sprintf(
+            "#%d %s %s %s | World Baseball Classic %d - %s",
+            $g->{seriesGameNumber},
+            $away, $score, $home, $g->{season}, $g->{description},
+          );
+          my $epoch = str2time($g->{gameDate});
+
+          # warn $g->{gameDate} . " $summary\n";
+          my $gameday     = 'https://www.mlb.com/gameday/' . $g->{gamePk};
+          my $description = "* $gameday \n";
+          $description .= "* " . Date::ICal->new(epoch => time)->ical . "\n";
+          my $vevent = Data::ICal::Entry::Event->new();
+          $vevent->add_properties(
+            description     => $description,
+            dtstart         => Date::ICal->new(epoch => $epoch)->ical,
+            duration        => 'PT3H0M',
+            'last-modified' => Date::ICal->new(epoch => time)->ical,
+            location        => venue($g->{venue}),
+            summary         => $summary,
+            uid             => $g->{gamePk},
+            url             => $gameday,
+          );
+          $VEVENT{ $g->{gamePk} } = $vevent;
+          $n++;
+        }
+      }
+      warn "got $url ($n events, $elapsed ms)\n";
     }
-  }
-  my $elapsed = int((time - $funcStart) * 1000);
-  warn "event($year): $elapsed ms\n";
-}
-
-sub venue
-{
-  my $v = shift;
-  my $l = $v->{location};
-  return sprintf('%s, %s, %s, %s, %s',
-    $v->{name}, $l->{address1}, $l->{address2}, $l->{city}, $l->{country});
-}
-
-sub dtstart
-{
-  my $vevent = shift;
-  return $vevent->{properties}{'dtstart'}[0]->{value};
-}
-
-END
-{
-  foreach my $vevent (sort { dtstart($a) <=> dtstart($b) } values %VEVENT)
-  {
-    $ics->add_entry($vevent);
-  }
-  print $ics->as_string;
-  warn "\n";
-  warn "Duration: " . int((time - $mainStart) * 1000) . " ms\n";
-  warn "Total: " . scalar(keys %VEVENT) . " events\n";
+  );
+  $FUTURE{$year} = $future;
 }
