@@ -35,7 +35,6 @@ foreach my $year (reverse sort @YEAR)
 
 foreach my $year (reverse sort keys %FUTURE)
 {
-  warn "await $year\n";
   my $future = $FUTURE{$year};
   await $future->get();
 }
