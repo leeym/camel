@@ -15,10 +15,8 @@ use Time::HiRes   qw(time);
 use Future::Utils qw( fmap_void );
 use strict;
 
-my $domain = shift || 'wbsc';
-my $base   = "http://www.$domain.org";
-my $year   = shift || (localtime)[5] + 1900;
-my $ics    = new Data::ICal;
+my $year = shift || (localtime)[5] + 1900;
+my $ics  = new Data::ICal;
 my %URL;
 my %VEVENT;
 my $http = Net::Async::HTTP->new(
@@ -26,7 +24,6 @@ my $http = Net::Async::HTTP->new(
   max_in_flight            => 0,
   timeout                  => 20,
 );
-
 my @YEAR = ($year);
 @YEAR = (yyyy0() .. yyyy1()) if scalar(@YEAR) == 0;
 my %START;
@@ -196,9 +193,12 @@ sub events
   }
 }
 
-foreach my $yyyy (@YEAR)
+foreach my $yyyy (reverse sort @YEAR)
 {
-  events("$base/calendar/$yyyy/baseball");
+  foreach my $domain ('wbsc', 'wbscasia')
+  {
+    events("http://www.$domain.org/calendar/$yyyy/baseball");
+  }
 }
 
 foreach my $future (@FUTURE)
