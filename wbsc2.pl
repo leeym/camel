@@ -35,6 +35,17 @@ sub by_year
   return $b <=> $a;
 }
 
+sub dtstart
+{
+  my $vevent = shift;
+  return $vevent->{properties}->{dtstart}[0]->{value};
+}
+
+sub by_dtstart
+{
+  return dtstart($a) cmp dtstart($b);
+}
+
 sub mmdd
 {
   my ($dd, $mm, $yy) = split('/', shift);
@@ -215,9 +226,9 @@ foreach my $future (@FUTURE2)
 
 END
 {
-  foreach my $id (sort { $a <=> $b } keys %VEVENT)
+  foreach my $vevent (sort by_dtstart values %VEVENT)
   {
-    $ics->add_entry($VEVENT{$id});
+    $ics->add_entry($vevent);
   }
   print $ics->as_string;
   warn "\n";

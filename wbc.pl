@@ -41,7 +41,7 @@ foreach my $year (reverse sort keys %FUTURE)
 
 END
 {
-  foreach my $vevent (sort { dtstart($a) <=> dtstart($b) } values %VEVENT)
+  foreach my $vevent (sort by_dtstart values %VEVENT)
   {
     $ics->add_entry($vevent);
   }
@@ -64,6 +64,11 @@ sub dtstart
 {
   my $vevent = shift;
   return $vevent->{properties}{'dtstart'}[0]->{value};
+}
+
+sub by_dtstart
+{
+  return dtstart($a) cmp dtstart($b);
 }
 
 sub event
