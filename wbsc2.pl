@@ -210,7 +210,7 @@ foreach my $yyyy (sort by_year (yyyy0() .. yyyy1()))
 {
   foreach my $domain ('wbsc', 'wbscasia')
   {
-    year("https://www.$domain.org/en/calendar/$yyyy/baseball");
+    year("https://www.$domain.org/en/calendar/$yyyy");
   }
 }
 
