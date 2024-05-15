@@ -124,7 +124,7 @@ sub year
       my $html     = $response->content;
       my $elapsed  = int((time - $START{$url}) * 1000);
       warn "got year $url ($elapsed ms)\n";
-      foreach my $url ($html =~ m{href="([^"]+)"}g)
+      foreach my $url ($html =~ m{window.open\('([^']+)'}g)
       {
         next if $url !~ m{/events/\d{4}-.*/home$};
         $url =~ s,/home,/schedule-and-results,;
