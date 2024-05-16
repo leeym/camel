@@ -206,7 +206,7 @@ sub events
   push(@FUTURE2, $future);
 }
 
-foreach my $yyyy (sort by_year (yyyy0() .. yyyy1()))
+foreach my $yyyy (sort by_year (2015 .. yyyy1()))
 {
   foreach my $domain ('wbsc', 'wbscasia')
   {
