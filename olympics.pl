@@ -31,7 +31,6 @@ my $url = build_url(
   path     => '/summer/schedules/api/ENG/schedule/noc/TPE',
 );
 
-warn "get $url\n";
 my $future = $http->GET($url)->on_done(
   sub {
     my $response = shift;
@@ -43,27 +42,27 @@ my $future = $http->GET($url)->on_done(
     #warn "got $url ($elapsed ms)\n";
     foreach my $u (@{ $data->{'units'} })
     {
-      my $summary     = $u->{'disciplineName'} . " " . $u->{'eventUnitName'};
-      my $description = '';
+      my $summary = $u->{'disciplineName'} . " " . $u->{'eventUnitName'};
+      $summary = "!!! $summary !!!" if $u->{'medalFlag'};
+      my $description = "* " . $u->{'locationDescription'} . "\n";
+      $description .= "* " . Date::ICal->new(epoch => time)->ical . "\n";
       foreach my $c (@{ $u->{'competitors'} })
       {
         next if $c->{'noc'} ne 'TPE';
         $description .= $c->{'name'} . " " . results($c->{'results'}) . "\n";
       }
-
-      #warn Dumper($u);
       my $vevent = Data::ICal::Entry::Event->new();
       $vevent->add_properties(
-        dtstart         => ical($u->{'startDate'}),
-        dtend           => ical($u->{'endDate'}),
-        'last-modified' => Date::ICal->new(epoch => time)->ical,
-        summary         => $summary,
-        uid             => $u->{id},
+        uid      => $u->{id},
         url      => 'https://olympics.com' . $u->{'extraData'}->{'detailUrl'},
-        location => $u->{'locationDescription'},
-        description => $description,
+        location => $u->{'venueDescription'},
+        dtstart  => ical($u->{'startDate'}),
+        dtend    => ical($u->{'endDate'}),
+        summary  => $summary,
+        description     => $description,
+        'last-modified' => Date::ICal->new(epoch => time)->ical,
       );
-      $ics->add_entry($vevent);
+      $VEVENT{ $u->{id} } = $vevent;
     }
   }
 );
@@ -71,6 +70,10 @@ await $future->get();
 
 END
 {
+  foreach my $vevent (sort by_dtstart values %VEVENT)
+  {
+    $ics->add_entry($vevent);
+  }
   print $ics->as_string;
   warn "\n";
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
@@ -94,4 +97,15 @@ sub results
   my $s = $r->{'mark'};
   $s .= ' [' . $r->{'winnerLoserTie'} . ']' if $r->{'winnerLoserTie'};
   return $s;
+}
+
+sub dtstart
+{
+  my $vevent = shift;
+  return $vevent->{properties}{'dtstart'}[0]->{value};
+}
+
+sub by_dtstart
+{
+  return dtstart($a) cmp dtstart($b);
 }
