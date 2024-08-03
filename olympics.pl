@@ -34,17 +34,16 @@ my $url = build_url(
 my $future = $http->GET($url)->on_done(
   sub {
     my $response = shift;
-    my $url      = $response->request->url;
     my $elapsed  = int((time - $start) * 1000);
     my $json     = $response->content;
     my $data     = decode_json($json);
-
-    #warn "got $url ($elapsed ms)\n";
     foreach my $u (@{ $data->{'units'} })
     {
+      my $url     = 'https://olympics.com' . $u->{'extraData'}->{'detailUrl'};
       my $summary = $u->{'disciplineName'} . " " . $u->{'eventUnitName'};
       $summary = "!!! $summary !!!" if $u->{'medalFlag'};
-      my $description = "* " . $u->{'locationDescription'} . "\n";
+      my $description = "* " . $url . "\n";
+      $description .= "* " . $u->{'locationDescription'} . "\n";
       $description .= "* " . Date::ICal->new(epoch => time)->ical . "\n";
       foreach my $c (@{ $u->{'competitors'} })
       {
@@ -53,12 +52,12 @@ my $future = $http->GET($url)->on_done(
       }
       my $vevent = Data::ICal::Entry::Event->new();
       $vevent->add_properties(
-        uid      => $u->{id},
-        url      => 'https://olympics.com' . $u->{'extraData'}->{'detailUrl'},
-        location => $u->{'venueDescription'},
-        dtstart  => ical($u->{'startDate'}),
-        dtend    => ical($u->{'endDate'}),
-        summary  => $summary,
+        uid             => $u->{id},
+        url             => $url,
+        location        => $u->{'venueDescription'},
+        dtstart         => ical($u->{'startDate'}),
+        dtend           => ical($u->{'endDate'}),
+        summary         => $summary,
         description     => $description,
         'last-modified' => Date::ICal->new(epoch => time)->ical,
       );
