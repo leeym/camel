@@ -31,6 +31,10 @@ my $url = build_url(
   path     => '/summer/schedules/api/ENG/schedule/noc/TPE',
 );
 
+my %METAL;
+$METAL{1} = 'Gold';
+$METAL{3} = 'Bronze';
+
 my $future = $http->GET($url)->on_done(
   sub {
     my $response = shift;
@@ -39,12 +43,16 @@ my $future = $http->GET($url)->on_done(
     my $data     = decode_json($json);
     foreach my $u (@{ $data->{'units'} })
     {
-      my $url     = 'https://olympics.com' . $u->{'extraData'}->{'detailUrl'};
-      my $summary = $u->{'disciplineName'} . " " . $u->{'eventUnitName'};
-      $summary = "!!! $summary !!!" if $u->{'medalFlag'};
+      my $now       = Date::ICal->new(epoch => time)->ical;
+      my $url       = 'https://olympics.com' . $u->{'extraData'}->{'detailUrl'};
+      my $medalFlag = $u->{'medalFlag'};
+      my $summary;
+      $summary = "[" . $METAL{$medalFlag} . "] " if $medalFlag;
+      $summary .= $u->{'disciplineName'} . " " . $u->{'eventUnitName'};
       my $description = "* " . $url . "\n";
       $description .= "* " . $u->{'locationDescription'} . "\n";
-      $description .= "* " . Date::ICal->new(epoch => time)->ical . "\n";
+      $description .= "* $now\n";
+
       foreach my $c (@{ $u->{'competitors'} })
       {
         next if $c->{'noc'} ne 'TPE';
@@ -59,7 +67,7 @@ my $future = $http->GET($url)->on_done(
         dtend           => ical($u->{'endDate'}),
         summary         => $summary,
         description     => $description,
-        'last-modified' => Date::ICal->new(epoch => time)->ical,
+        'last-modified' => $now,
       );
       $VEVENT{ $u->{id} } = $vevent;
     }
