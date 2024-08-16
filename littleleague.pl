@@ -103,6 +103,7 @@ sub event
         for my $g (@GAME)
         {
           next if $g !~ m{Asia-Pacific};
+          $g =~ s{Asia-Pacific}{Taiwan}g;
           my ($header, $content, $footer) = ($1, $2, $3)
             if $g =~ m{(<header.*/header>)(.*)(<footer.*/footer>)};
           my $header = $1 if $g =~ m{<header.*?>(.*)</header>};
