@@ -14,7 +14,7 @@ use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
 
-my @YEAR = (2006 .. (localtime)[5] + 1901);
+my @YEAR = (2006, 2009, 2012, 2013, 2017, 2023 .. (localtime)[5] + 1900);
 my $ics  = new Data::ICal;
 my $http = Net::Async::HTTP->new(
   max_connections_per_host => 0,
@@ -23,7 +23,7 @@ my $http = Net::Async::HTTP->new(
 );
 my %VEVENT;
 my $start = time();
-my %FUTURE;
+my @FUTURE;
 my %START;
 
 IO::Async::Loop->new()->add($http);
@@ -33,9 +33,9 @@ foreach my $year (reverse sort @YEAR)
   event($year);
 }
 
-foreach my $year (reverse sort keys %FUTURE)
+while (scalar(@FUTURE))
 {
-  my $future = $FUTURE{$year};
+  my $future = shift @FUTURE;
   await $future->get();
 }
 
@@ -155,5 +155,5 @@ sub event
       warn "got $url ($n events, $elapsed ms)\n";
     }
   );
-  $FUTURE{$year} = $future;
+  push(@FUTURE, $future);
 }

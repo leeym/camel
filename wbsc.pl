@@ -9,9 +9,8 @@ use IO::Socket::SSL;
 use JSON::XS qw(decode_json);
 use Net::Async::HTTP;
 use Net::SSLeay;
-use POSIX         qw(mktime);
-use Time::HiRes   qw(time);
-use Future::Utils qw( fmap_void );
+use POSIX       qw(mktime);
+use Time::HiRes qw(time);
 use strict;
 
 my $ics = new Data::ICal;
@@ -23,8 +22,7 @@ my $http = Net::Async::HTTP->new(
   timeout                  => 20,
 );
 my %START;
-my @FUTURE1;
-my @FUTURE2;
+my @FUTURE;
 my $start = time;
 
 IO::Async::Loop->new()->add($http);
@@ -93,14 +91,9 @@ sub boxscore
   return $boxscore;
 }
 
-sub yyyy0
+sub yyyy
 {
-  return (localtime)[5] + 1900 - 1;
-}
-
-sub yyyy1
-{
-  return (localtime)[5] + 1900 + 1;
+  return (localtime)[5] + 1900;
 }
 
 sub duration
@@ -133,7 +126,7 @@ sub year
       }
     }
   );
-  push(@FUTURE1, $future);
+  push(@FUTURE, $future);
 }
 
 sub events
@@ -203,10 +196,10 @@ sub events
       }
     }
   );
-  push(@FUTURE2, $future);
+  push(@FUTURE, $future);
 }
 
-foreach my $yyyy (sort by_year (2015 .. yyyy1()))
+foreach my $yyyy (sort by_year (yyyy() - 10 .. yyyy() + 1))
 {
   foreach my $domain ('wbsc', 'wbscasia')
   {
@@ -214,13 +207,9 @@ foreach my $yyyy (sort by_year (2015 .. yyyy1()))
   }
 }
 
-foreach my $future (@FUTURE1)
+while (scalar(@FUTURE))
 {
-  await $future->get();
-}
-
-foreach my $future (@FUTURE2)
-{
+  my $future = shift @FUTURE;
   await $future->get();
 }
 

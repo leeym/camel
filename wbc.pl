@@ -23,7 +23,7 @@ my $http = Net::Async::HTTP->new(
 );
 my %VEVENT;
 my $start = time();
-my %FUTURE;
+my @FUTURE;
 my %START;
 
 IO::Async::Loop->new()->add($http);
@@ -33,9 +33,9 @@ foreach my $year (reverse sort @YEAR)
   event($year);
 }
 
-foreach my $year (reverse sort keys %FUTURE)
+while (scalar(@FUTURE))
 {
-  my $future = $FUTURE{$year};
+  my $future = shift @FUTURE;
   await $future->get();
 }
 
@@ -155,5 +155,5 @@ sub event
       warn "got $url ($n events, $elapsed ms)\n";
     }
   );
-  $FUTURE{$year} = $future;
+  push(@FUTURE, $future);
 }
