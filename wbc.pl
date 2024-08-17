@@ -14,7 +14,7 @@ use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
 
-my @YEAR = (2006 .. (localtime)[5] + 1901);
+my @YEAR = (2006, 2009, 2012, 2013, 2017, 2023 .. (localtime)[5] + 1900);
 my $ics  = new Data::ICal;
 my $http = Net::Async::HTTP->new(
   max_connections_per_host => 0,
