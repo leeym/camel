@@ -110,14 +110,13 @@ sub year
   my $url = shift;
   return if $START{$url};
   $START{$url} = time;
-  warn "get year $url\n";
   my $future = $http->GET($url)->on_done(
     sub {
       my $response = shift;
       my $url      = $response->request->url;
       my $html     = $response->content;
       my $elapsed  = int((time - $START{$url}) * 1000);
-      warn "got year $url ($elapsed ms)\n";
+      warn "GET $url ($elapsed ms)\n";
       foreach my $url ($html =~ m{window.open\('([^']+)'}g)
       {
         next if $url !~ m{/events/\d{4}-.*/home$};
@@ -135,7 +134,6 @@ sub events
   my $url = shift;
   return if $START{$url};
   $START{$url} = time;
-  warn "get events $url\n";
   my $future = $http->GET($url)->on_done(
     sub {
       my $response = shift;
@@ -144,8 +142,9 @@ sub events
       my $data     = $1 if $html =~ m{data-page="(.*?)">};
       return if !$data;
       my $elapsed = int((time - $START{$url}) * 1000);
-      warn "got events $url ($elapsed ms)\n";
+      warn "GET $url ($elapsed ms)\n";
       $data =~ s{&quot;}{"}g;
+      $data =~ s{&#039;}{'}g;
       my $d = decode_json($data);
       my $t = $d->{props}->{tournament};
 
@@ -158,7 +157,7 @@ sub events
         $score = 'vs' if $score eq '0:0';
         my $away    = "$g->{awaylabel}";
         my $home    = "$g->{homelabel}";
-        my $summary = "#$g->{gamenumber} $away $score $home";
+        my $summary = "$away $score $home";
         $summary .= " | $t->{tournamentname}";
         $summary .= " - $g->{gametypelabel}";
         $summary =~ s{Chinese Taipei}{Taiwan};
@@ -170,28 +169,32 @@ sub events
         }
         my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
 
-        # warn "$yyyy-$mm-$dd $HH:$MM ($ENV{TZ}) $summary\n";
-        my $dtstart  = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+        my $ts      = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
+        my $dtstart = Date::ICal->new(epoch => $ts)->ical;
+        $dtstart =~ s{Z}{T000000Z} if $dtstart !~ m{T};
+        warn "$yyyy-$mm-$dd $HH:$MM ($ENV{TZ}) $summary\n";
         my $duration = $g->{duration} || duration($summary);
         my ($hour, $min) = split(/\D/, $duration);
         $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
         my $standings = $url;
         $standings =~ s,schedule-and-results,standings,;
+        my $boxscore    = boxscore($url, $g);
         my $description = '<ul>';
-        $description .= '<li>' . $standings . '</li>';
-        $description .= '<li>' . boxscore($url, $g) . '</li>';
-        $description .= '<li>' . $g->{gamevideo} . '</li>' if $g->{gamevideo};
+        $description .= '<li><a href="' . $standings . '">Standing</a></li>';
+        $description .= '<li><a href="' . $boxscore . '">Box Score</a></li>';
+        $description .= '<li><a href="' . $g->{gamevideo} . '">Watch</a></li>'
+          if $g->{gamevideo};
         $description .= '</ul>';
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           description     => $description,
-          dtstart         => Date::ICal->new(epoch => $dtstart)->ical,
+          dtstart         => $dtstart,
           duration        => $duration,
           'last-modified' => $now,
           location        => $g->{stadium} . ', ' . $g->{location},
           summary         => $summary,
           uid             => $g->{id},
-          url             => boxscore($url, $g),
+          url             => $boxscore,
         );
         $VEVENT{ $g->{id} } = $vevent;
       }
@@ -214,21 +217,21 @@ while (scalar(@FUTURE))
   await $future->get();
 }
 
+foreach my $vevent (sort by_dtstart values %VEVENT)
+{
+  $ics->add_entry($vevent);
+}
+my $vevent = Data::ICal::Entry::Event->new();
+$vevent->add_properties(
+  dtstart => Date::ICal->new(epoch => $start)->ical,
+  dtend   => Date::ICal->new(epoch => time)->ical,
+  summary => 'Last Modified',
+);
+$ics->add_entry($vevent);
+print $ics->as_string;
+
 END
 {
-  foreach my $vevent (sort by_dtstart values %VEVENT)
-  {
-    $ics->add_entry($vevent);
-  }
-  my $vevent = Data::ICal::Entry::Event->new();
-  $vevent->add_properties(
-    dtstart => Date::ICal->new(epoch => $start)->ical,
-    dtend   => Date::ICal->new(epoch => time)->ical,
-    summary => 'Last Modified',
-  );
-  $ics->add_entry($vevent);
-  print $ics->as_string;
-  warn "\n";
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
 }

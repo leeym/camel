@@ -76,24 +76,23 @@ my $future = $http->GET($url)->on_done(
 );
 await $future->get();
 
+foreach my $vevent (sort by_dtstart values %VEVENT)
+{
+  $ics->add_entry($vevent);
+}
+my $vevent = Data::ICal::Entry::Event->new();
+$vevent->add_properties(
+  dtstart => Date::ICal->new(epoch => $start)->ical,
+  dtend   => Date::ICal->new(epoch => time)->ical,
+  summary => 'Last Modified',
+);
+$ics->add_entry($vevent);
+print $ics->as_string;
+
 END
 {
-  foreach my $vevent (sort by_dtstart values %VEVENT)
-  {
-    $ics->add_entry($vevent);
-  }
-  my $vevent = Data::ICal::Entry::Event->new();
-  $vevent->add_properties(
-    dtstart => Date::ICal->new(epoch => $start)->ical,
-    dtend   => Date::ICal->new(epoch => time)->ical,
-    summary => 'Last Modified',
-  );
-  $ics->add_entry($vevent);
-  print $ics->as_string;
-  warn "\n";
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
-  exit(0);
 }
 
 sub ical

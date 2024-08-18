@@ -40,24 +40,23 @@ while (scalar(@FUTURE))
   await $future->get();
 }
 
+foreach my $vevent (sort by_dtstart values %VEVENT)
+{
+  $ics->add_entry($vevent);
+}
+my $vevent = Data::ICal::Entry::Event->new();
+$vevent->add_properties(
+  dtstart => Date::ICal->new(epoch => $start)->ical,
+  dtend   => Date::ICal->new(epoch => time)->ical,
+  summary => 'Last Modified',
+);
+$ics->add_entry($vevent);
+print $ics->as_string;
+
 END
 {
-  foreach my $vevent (sort by_dtstart values %VEVENT)
-  {
-    $ics->add_entry($vevent);
-  }
-  my $vevent = Data::ICal::Entry::Event->new();
-  $vevent->add_properties(
-    dtstart => Date::ICal->new(epoch => $start)->ical,
-    dtend   => Date::ICal->new(epoch => time)->ical,
-    summary => 'Last Modified',
-  );
-  $ics->add_entry($vevent);
-  print $ics->as_string;
-  warn "\n";
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
-  exit(0);
 }
 
 sub venue
@@ -106,7 +105,6 @@ sub event
 
   return if $START{$url};
   $START{$url} = time;
-  warn "get $url\n";
   my $future = $http->GET($url)->on_done(
     sub {
       my $response = shift;
@@ -114,7 +112,7 @@ sub event
       my $elapsed  = int((time - $START{$url}) * 1000);
       my $json     = $response->content;
       my $data     = decode_json($json);
-      my $n        = 0;
+      warn "GET $url ($elapsed ms)\n";
       foreach my $date (@{ $data->{dates} })
       {
         next if $date->{totalGames} == 0;
@@ -134,14 +132,11 @@ sub event
             $g->{teams}->{away}->{score},
             $g->{teams}->{home}->{score});
           $score = 'vs' if $score eq '0:0';
-          my $summary = sprintf(
-            "#%d %s %s %s | World Baseball Classic %d - %s",
-            $g->{seriesGameNumber},
-            $away, $score, $home, $g->{season}, $g->{description},
-          );
+          my $summary = sprintf("%s %s %s | World Baseball Classic %d - %s",
+            $away, $score, $home, $g->{season}, $g->{description},);
           my $epoch = str2time($g->{gameDate});
 
-          # warn $g->{gameDate} . " $summary\n";
+          warn $g->{gameDate} . " $summary\n";
           my $gameday     = 'https://www.mlb.com/gameday/' . $g->{gamePk};
           my $description = $gameday;
           my $vevent      = Data::ICal::Entry::Event->new();
@@ -156,10 +151,8 @@ sub event
             url             => $gameday,
           );
           $VEVENT{ $g->{gamePk} } = $vevent;
-          $n++;
         }
       }
-      warn "got $url ($n events, $elapsed ms)\n";
     }
   );
   push(@FUTURE, $future);
