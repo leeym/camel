@@ -49,10 +49,10 @@ my $future = $http->GET($url)->on_done(
       my $summary;
       $summary = "[" . $METAL{$medalFlag} . "] " if $medalFlag;
       $summary .= $u->{'disciplineName'} . " " . $u->{'eventUnitName'};
-      my $description;
-      $drscription .= "* $now\n";
-      $description .= "* $url\n";
-      $description .= "* $u->{'locationDescription'}\n";
+      my $description = '<ul>';
+      $description .= '<li>' . $url . '</li>';
+      $description .= '<li>' . $u->{'locationDescription'} . '</li>';
+      $description .= '</ul>';
 
       foreach my $c (@{ $u->{'competitors'} })
       {

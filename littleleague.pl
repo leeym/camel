@@ -15,7 +15,9 @@ use URL::Builder;
 use strict;
 
 my $yyyy = (localtime)[5] + 1900;
-my @YEAR = ($yyyy - 10 .. $yyyy);
+
+#my @YEAR = ($yyyy - 10 .. $yyyy);
+my @YEAR = ($yyyy);
 my $ics  = new Data::ICal;
 my $http = Net::Async::HTTP->new(
   max_connections_per_host => 0,
@@ -28,19 +30,19 @@ my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
 my %START;
 
-my %MM;
-$MM{January}   = '01';
-$MM{Febrery}   = '02';
-$MM{March}     = '03';
-$MM{April}     = '04';
-$MM{May}       = '05';
-$MM{June}      = '06';
-$MM{July}      = '07';
-$MM{August}    = '08';
-$MM{September} = '09';
-$MM{October}   = '10';
-$MM{November}  = '11';
-$MM{December}  = '12';
+my %MON;
+$MON{January}   = '01';
+$MON{Febrery}   = '02';
+$MON{March}     = '03';
+$MON{April}     = '04';
+$MON{May}       = '05';
+$MON{June}      = '06';
+$MON{July}      = '07';
+$MON{August}    = '08';
+$MON{September} = '09';
+$MON{October}   = '10';
+$MON{November}  = '11';
+$MON{December}  = '12';
 
 my %LOCATION;
 $LOCATION{llbws} =
@@ -52,7 +54,8 @@ IO::Async::Loop->new()->add($http);
 
 foreach my $year (reverse sort @YEAR)
 {
-  my @TYPE = qw(llbws jlbws);
+  #my @TYPE = qw(llbws jlbws);
+  my @TYPE = qw(jlbws);
   for my $type (@TYPE)
   {
     event($year, $type);
@@ -135,13 +138,13 @@ sub event
         my @INFO     = split(/@/, $info);
         my $datetime = $INFO[0];
 
-        my $hh = sprintf("%02d", $1) if $datetime =~ m{(\d+)};
-        my $mm = sprintf("%02d", $2) if $datetime =~ m{(\d+):(\d{2})};
-        $hh += 12 if $datetime =~ m{PM} && $hh != 12;
-        my $mm = $MM{$1}             if $datetime =~ m{ ([A-Z][a-z]*) \d+};
-        my $dd = sprintf("%02d", $1) if $datetime =~ m{(\d{1,2})};
+        my $HH = sprintf("%02d", $1) if $datetime =~ m{(\d+)};
+        my $MM = sprintf("%02d", $2) if $datetime =~ m{(\d+):(\d{2})};
+        $HH += 12 if $datetime =~ m{PM} && $HH != 12;
+        my $mm = $MON{$1}            if $datetime =~ m{ ([A-Z][a-z]*) \d+};
+        my $dd = sprintf("%02d", $1) if $datetime =~ m{ [A-Z][a-z]* (\d{1,2})};
 
-        my $ical = $year . $mm . $dd . 'T' . $hh . $mm . '00';
+        my $ical = $year . $mm . $dd . 'T' . $HH . $MM . '00';
         my $summary;
         my $away;
         my $home;
@@ -167,11 +170,9 @@ sub event
         $result = 'vs' if $result eq ':';
         $summary .= "$away $result $home | $title $game";
 
-        my $links = $1 if $footer =~ m{(<ul.*?/ul>)};
-        my $description;
-        $description .= "* $now\n";
-        $description .= $links;
-        my $vevent = Data::ICal::Entry::Event->new();
+        my $links       = $1 if $footer =~ m{(<ul.*?/ul>)};
+        my $description = $links;
+        my $vevent      = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           description => $description,
           dtstart  => Date::ICal->new(ical => $ical, offset => '-0400')->ical,

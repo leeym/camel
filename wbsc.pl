@@ -177,11 +177,11 @@ sub events
         $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
         my $standings = $url;
         $standings =~ s,schedule-and-results,standings,;
-        my $description;
-        $description .= "* $now\n";
-        $description .= "* " . $standings . "\n";
-        $description .= "* " . boxscore($url, $g) . "\n";
-        $description .= "* " . $g->{gamevideo} . "\n" if $g->{gamevideo};
+        my $description = '<ul>';
+        $description .= '<li>' . $standings . '</li>';
+        $description .= '<li>' . boxscore($url, $g) . '</li>';
+        $description .= '<li>' . $g->{gamevideo} . '</li>' if $g->{gamevideo};
+        $description .= '</ul>';
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           description     => $description,

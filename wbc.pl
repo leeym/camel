@@ -142,11 +142,9 @@ sub event
           my $epoch = str2time($g->{gameDate});
 
           # warn $g->{gameDate} . " $summary\n";
-          my $gameday = 'https://www.mlb.com/gameday/' . $g->{gamePk};
-          my $description;
-          $description .= "* $now\n";
-          $description .= "* $gameday\n";
-          my $vevent = Data::ICal::Entry::Event->new();
+          my $gameday     = 'https://www.mlb.com/gameday/' . $g->{gamePk};
+          my $description = $gameday;
+          my $vevent      = Data::ICal::Entry::Event->new();
           $vevent->add_properties(
             description     => $description,
             dtstart         => Date::ICal->new(epoch => $epoch)->ical,
