@@ -16,8 +16,7 @@ use strict;
 
 my $yyyy = (localtime)[5] + 1900;
 
-#my @YEAR = ($yyyy - 10 .. $yyyy);
-my @YEAR = ($yyyy);
+my @YEAR = ($yyyy - 10 .. $yyyy);
 my $ics  = new Data::ICal;
 my $http = Net::Async::HTTP->new(
   max_connections_per_host => 0,
@@ -54,8 +53,7 @@ IO::Async::Loop->new()->add($http);
 
 foreach my $year (reverse sort @YEAR)
 {
-  #my @TYPE = qw(llbws jlbws);
-  my @TYPE = qw(jlbws);
+  my @TYPE = qw(llbws jlbws);
   for my $type (@TYPE)
   {
     event($year, $type);
