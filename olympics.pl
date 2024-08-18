@@ -23,6 +23,7 @@ my $http = Net::Async::HTTP->new(
 );
 my %VEVENT;
 my $start = time();
+my $now   = Date::ICal->new(epoch => $start)->ical;
 
 IO::Async::Loop->new()->add($http);
 
@@ -43,15 +44,15 @@ my $future = $http->GET($url)->on_done(
     my $data     = decode_json($json);
     foreach my $u (@{ $data->{'units'} })
     {
-      my $now       = Date::ICal->new(epoch => time)->ical;
       my $url       = 'https://olympics.com' . $u->{'extraData'}->{'detailUrl'};
       my $medalFlag = $u->{'medalFlag'};
       my $summary;
       $summary = "[" . $METAL{$medalFlag} . "] " if $medalFlag;
       $summary .= $u->{'disciplineName'} . " " . $u->{'eventUnitName'};
-      my $description = "* " . $url . "\n";
-      $description .= "* " . $u->{'locationDescription'} . "\n";
-      $description .= "* $now\n";
+      my $description;
+      $drscription .= "* $now\n";
+      $description .= "* $url\n";
+      $description .= "* $u->{'locationDescription'}\n";
 
       foreach my $c (@{ $u->{'competitors'} })
       {
@@ -81,6 +82,13 @@ END
   {
     $ics->add_entry($vevent);
   }
+  my $vevent = Data::ICal::Entry::Event->new();
+  $vevent->add_properties(
+    dtstart => Date::ICal->new(epoch => $start)->ical,
+    dtend   => Date::ICal->new(epoch => time)->ical,
+    summary => 'Last Modified',
+  );
+  $ics->add_entry($vevent);
   print $ics->as_string;
   warn "\n";
   warn "Total: " . scalar(keys %VEVENT) . " events\n";

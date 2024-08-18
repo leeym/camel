@@ -25,6 +25,7 @@ my $http = Net::Async::HTTP->new(
 my @FUTURE;
 my %VEVENT;
 my $start = time();
+my $now   = Date::ICal->new(epoch => $start)->ical;
 my %START;
 
 my %MM;
@@ -69,6 +70,13 @@ END
   {
     $ics->add_entry($vevent);
   }
+  my $vevent = Data::ICal::Entry::Event->new();
+  $vevent->add_properties(
+    dtstart => Date::ICal->new(epoch => $start)->ical,
+    dtend   => Date::ICal->new(epoch => time)->ical,
+    summary => 'Last Modified',
+  );
+  $ics->add_entry($vevent);
   print $ics->as_string;
   warn "\n";
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
@@ -160,16 +168,15 @@ sub event
         $summary .= "$away $result $home | $title $game";
 
         my $links = $1 if $footer =~ m{(<ul.*?/ul>)};
-
-        my $lastmodified = Date::ICal->new(epoch => time)->ical;
-        my $description  = "* $lastmodified\n$links";
-        my $vevent       = Data::ICal::Entry::Event->new();
-        my $epoch        = time;
+        my $description;
+        $description .= "* $now\n";
+        $description .= $links;
+        my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           description => $description,
           dtstart  => Date::ICal->new(ical => $ical, offset => '-0400')->ical,
           duration => 'PT3H0M',
-          'last-modified' => Date::ICal->new(epoch => time)->ical,
+          'last-modified' => $now,
           location        => $LOCATION{$type},
           summary         => $summary,
         );

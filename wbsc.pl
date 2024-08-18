@@ -24,6 +24,7 @@ my $http = Net::Async::HTTP->new(
 my %START;
 my @FUTURE;
 my $start = time;
+my $now   = Date::ICal->new(epoch => $start)->ical;
 
 IO::Async::Loop->new()->add($http);
 
@@ -177,16 +178,16 @@ sub events
         my $standings = $url;
         $standings =~ s,schedule-and-results,standings,;
         my $description;
+        $description .= "* $now\n";
         $description .= "* " . $standings . "\n";
         $description .= "* " . boxscore($url, $g) . "\n";
         $description .= "* " . $g->{gamevideo} . "\n" if $g->{gamevideo};
-        $description .= "* " . Date::ICal->new(epoch => time)->ical;
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           description     => $description,
           dtstart         => Date::ICal->new(epoch => $dtstart)->ical,
           duration        => $duration,
-          'last-modified' => Date::ICal->new(epoch => time)->ical,
+          'last-modified' => $now,
           location        => $g->{stadium} . ', ' . $g->{location},
           summary         => $summary,
           uid             => $g->{id},
@@ -219,6 +220,13 @@ END
   {
     $ics->add_entry($vevent);
   }
+  my $vevent = Data::ICal::Entry::Event->new();
+  $vevent->add_properties(
+    dtstart => Date::ICal->new(epoch => $start)->ical,
+    dtend   => Date::ICal->new(epoch => time)->ical,
+    summary => 'Last Modified',
+  );
+  $ics->add_entry($vevent);
   print $ics->as_string;
   warn "\n";
   warn "Total: " . scalar(keys %VEVENT) . " events\n";

@@ -23,6 +23,7 @@ my $http = Net::Async::HTTP->new(
 );
 my %VEVENT;
 my $start = time();
+my $now   = Date::ICal->new(epoch => $start)->ical;
 my @FUTURE;
 my %START;
 
@@ -45,6 +46,13 @@ END
   {
     $ics->add_entry($vevent);
   }
+  my $vevent = Data::ICal::Entry::Event->new();
+  $vevent->add_properties(
+    dtstart => Date::ICal->new(epoch => $start)->ical,
+    dtend   => Date::ICal->new(epoch => time)->ical,
+    summary => 'Last Modified',
+  );
+  $ics->add_entry($vevent);
   print $ics->as_string;
   warn "\n";
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
@@ -134,15 +142,16 @@ sub event
           my $epoch = str2time($g->{gameDate});
 
           # warn $g->{gameDate} . " $summary\n";
-          my $gameday     = 'https://www.mlb.com/gameday/' . $g->{gamePk};
-          my $description = "* $gameday \n";
-          $description .= "* " . Date::ICal->new(epoch => time)->ical . "\n";
+          my $gameday = 'https://www.mlb.com/gameday/' . $g->{gamePk};
+          my $description;
+          $description .= "* $now\n";
+          $description .= "* $gameday\n";
           my $vevent = Data::ICal::Entry::Event->new();
           $vevent->add_properties(
             description     => $description,
             dtstart         => Date::ICal->new(epoch => $epoch)->ical,
             duration        => 'PT3H0M',
-            'last-modified' => Date::ICal->new(epoch => time)->ical,
+            'last-modified' => $now,
             location        => venue($g->{venue}),
             summary         => $summary,
             uid             => $g->{gamePk},
