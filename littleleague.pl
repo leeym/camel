@@ -136,25 +136,30 @@ sub event
         my @INFO     = split(/@/, $info);
         my $datetime = $INFO[0];
 
-        my $HH;
-        my $MM;
+        my $hour;
+        my $min;
         if ($datetime =~ m{(\d+):(\d+)\s*(AM|PM)})
         {
-          $HH = sprintf("%02d", $1);
-          $MM = sprintf("%02d", $2);
-          $HH += 12 if $3 eq 'PM' && $HH != 12;
+          $hour = sprintf("%02d", $1);
+          $min  = sprintf("%02d", $2);
+          $hour += 12 if $3 eq 'PM' && $hour != 12;
         }
         elsif ($datetime =~ m{(\d+)\s*(AM|PM)})
         {
-          $HH = sprintf("%02d", $1);
-          $MM = '00';
-          $HH += 12 if $2 eq 'PM' && $HH != 12;
+          $hour = sprintf("%02d", $1);
+          $min  = '00';
+          $hour += 12 if $2 eq 'PM' && $hour != 12;
         }
-        die $datetime if !$HH;
-        my $mm = $MON{$1}            if $datetime =~ m{ ([A-Z][a-z]*) \d+};
-        my $dd = sprintf("%02d", $1) if $datetime =~ m{ [A-Z][a-z]* (\d{1,2})};
+        die $datetime if !$hour;
+        my $month;
+        my $day;
+        if ($datetime =~ m{ ([A-Z][a-z]*) (\d{1,2})})
+        {
+          $month = $MON{$1};
+          $day   = sprintf("%02d", $2);
+        }
+        die if !$day;
 
-        my $ical = $year . $mm . $dd . 'T' . $HH . $MM . '00';
         my $away;
         my $home;
         my $result;
@@ -179,14 +184,21 @@ sub event
         $result = 'vs' if $result eq ':';
         my $summary = "$away $result $home | $title - $game";
 
-        warn "$year-$mm-$dd $HH:$MM (America/New_York) $summary\n";
+        warn "$year-$month-$day $hour:$min (America/New_York) $summary\n";
         my $links       = $1 if $footer =~ m{(<ul.*?/ul>)};
         my $description = $links;
         my $vevent      = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           description => $description,
-          dtstart  => Date::ICal->new(ical => $ical, offset => '-0400')->ical,
-          duration => 'PT3H0M',
+          dtstart     => Date::ICal->new(
+            year   => $year,
+            month  => $month,
+            day    => $day,
+            hour   => $hour,
+            min    => $min,
+            offset => '-0400'
+          )->ical,
+          duration        => 'PT3H0M',
           'last-modified' => $now,
           location        => $LOCATION{$type},
           summary         => $summary,

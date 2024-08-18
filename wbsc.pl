@@ -167,12 +167,17 @@ sub events
         {
           $start = (split(' ', $start))[0] . ' ' . $g->{gamestart};
         }
-        my ($yyyy, $mm, $dd, $HH, $MM) = split(/\D/, $start);
+        my ($year, $month, $day, $hour, $min) = split(/\D/, $start);
 
-        my $ts      = mktime(0, $MM, $HH, $dd, $mm - 1, $yyyy - 1900);
-        my $dtstart = Date::ICal->new(epoch => $ts)->ical;
+        my $dtstart = Date::ICal->new(
+          year  => $year,
+          month => $month,
+          day   => $day,
+          hour  => $hour,
+          mon   => $min,
+        )->ical;
         $dtstart =~ s{Z}{T000000Z} if $dtstart !~ m{T};
-        warn "$yyyy-$mm-$dd $HH:$MM ($ENV{TZ}) $summary\n";
+        warn "$start ($ENV{TZ}) $summary\n";
         my $duration = $g->{duration} || duration($summary);
         my ($hour, $min) = split(/\D/, $duration);
         $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
