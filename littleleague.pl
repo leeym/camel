@@ -131,7 +131,7 @@ sub event
         next if !$header || !$content || !$footer;
         next if $header !~ m{Game};
 
-        my $title = "$year $1"
+        my $title = "$1 $year"
           if $header =~ m{<h3 class="ws-card__title">(.*?)</h3>};
         my $game     = $1 if $header =~ m{(Game\s+\d+)};
         my $info     = $1 if $header =~ m{.*>(.*?M.*?)<};

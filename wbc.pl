@@ -133,8 +133,8 @@ sub event
             $g->{teams}->{away}->{score},
             $g->{teams}->{home}->{score});
           $score = 'vs' if $score eq '0:0';
-          my $summary = sprintf("%s %s %s | %d World Baseball Classic - %s",
-            $away, $score, $home, $g->{season}, $g->{description},);
+          my $summary = sprintf("%s %s %s | World Baseball Classic %s - %s",
+            $away, $score, $home, $g->{season}, $g->{description});
           my $epoch = str2time($g->{gameDate});
 
           warn $g->{gameDate} . " $summary\n";
