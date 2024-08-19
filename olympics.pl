@@ -85,6 +85,7 @@ $vevent->add_properties(
   dtstart => Date::ICal->new(epoch => $start)->ical,
   dtend   => Date::ICal->new(epoch => time)->ical,
   summary => 'Last Modified',
+  uid     => 'Last Modified',
 );
 $ics->add_entry($vevent);
 print $ics->as_string;

@@ -74,6 +74,7 @@ $vevent->add_properties(
   dtstart => Date::ICal->new(epoch => $start)->ical,
   dtend   => Date::ICal->new(epoch => time)->ical,
   summary => 'Last Modified',
+  uid     => 'Last Modified',
 );
 $ics->add_entry($vevent);
 print $ics->as_string;
@@ -130,9 +131,10 @@ sub event
         next if !$header || !$content || !$footer;
         next if $header !~ m{Game};
 
-        my $title = $1 if $header =~ m{<h3 class="ws-card__title">(.*?)</h3>};
-        my $game  = $1 if $header =~ m{(Game\s+\d+)};
-        my $info  = $1 if $header =~ m{.*>(.*?M.*?)<};
+        my $title = "$year $1"
+          if $header =~ m{<h3 class="ws-card__title">(.*?)</h3>};
+        my $game     = $1 if $header =~ m{(Game\s+\d+)};
+        my $info     = $1 if $header =~ m{.*>(.*?M.*?)<};
         my @INFO     = split(/@/, $info);
         my $datetime = $INFO[0];
 
@@ -204,6 +206,7 @@ sub event
           'last-modified' => $now,
           location        => $LOCATION{$type},
           summary         => $summary,
+          uid             => "$title - $game",
         );
         $VEVENT{$summary} = $vevent;
       }

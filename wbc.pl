@@ -49,6 +49,7 @@ $vevent->add_properties(
   dtstart => Date::ICal->new(epoch => $start)->ical,
   dtend   => Date::ICal->new(epoch => time)->ical,
   summary => 'Last Modified',
+  uid     => 'Last Modified',
 );
 $ics->add_entry($vevent);
 print $ics->as_string;
@@ -132,7 +133,7 @@ sub event
             $g->{teams}->{away}->{score},
             $g->{teams}->{home}->{score});
           $score = 'vs' if $score eq '0:0';
-          my $summary = sprintf("%s %s %s | World Baseball Classic %d - %s",
+          my $summary = sprintf("%s %s %s | %d World Baseball Classic - %s",
             $away, $score, $home, $g->{season}, $g->{description},);
           my $epoch = str2time($g->{gameDate});
 
