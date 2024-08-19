@@ -138,11 +138,20 @@ sub event
           my $epoch = str2time($g->{gameDate});
 
           warn $g->{gameDate} . " $summary\n";
-          my $gameday     = 'https://www.mlb.com/gameday/' . $g->{gamePk};
-          my $description = $gameday;
-          my $vevent      = Data::ICal::Entry::Event->new();
+          my $gameday = 'https://www.mlb.com/gameday/' . $g->{gamePk};
+          my %DESC;
+          $DESC{Gameday} = $gameday;
+          my $desc = '<ul>';
+          foreach my $text (sort keys %DESC)
+          {
+            $desc .= '<li>';
+            $desc .= sprintf('<a href="%s">%s</a>', $DESC{$text}, $text);
+            $desc .= '</li>';
+          }
+          $desc .= '</ul>';
+          my $vevent = Data::ICal::Entry::Event->new();
           $vevent->add_properties(
-            description     => $description,
+            description     => $desc,
             dtstart         => Date::ICal->new(epoch => $epoch)->ical,
             duration        => 'PT3H0M',
             'last-modified' => $now,

@@ -183,16 +183,23 @@ sub events
         $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
         my $standings = $url;
         $standings =~ s,schedule-and-results,standings,;
-        my $boxscore    = boxscore($url, $g);
-        my $description = '<ul>';
-        $description .= '<li><a href="' . $standings . '">Standing</a></li>';
-        $description .= '<li><a href="' . $boxscore . '">Box Score</a></li>';
-        $description .= '<li><a href="' . $g->{gamevideo} . '">Watch</a></li>'
-          if $g->{gamevideo};
-        $description .= '</ul>';
+        my $boxscore = boxscore($url, $g);
+        my %DESC;
+        $DESC{'Standings'} = $standings;
+        $DESC{'Box Score'} = $boxscore;
+        $DESC{'Schedule'}  = $url;
+        $DESC{'Watch'}     = $g->{gamevideo} if $g->{gamevideo};
+
+        my $desc = '<ul>';
+        foreach my $text (sort keys %DESC)
+        {
+          $desc .= sprintf('<li><a href="%s">%s</a></li>', $DESC{$text}, $text);
+        }
+        $desc .= '</ul>';
+
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
-          description     => $description,
+          description     => $desc,
           dtstart         => $dtstart,
           duration        => $duration,
           'last-modified' => $now,

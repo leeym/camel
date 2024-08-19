@@ -187,9 +187,23 @@ sub event
         my $summary = "$away $result $home | $title - $game";
 
         warn "$year-$month-$day $hour:$min (America/New_York) $summary\n";
-        my $links       = $1 if $footer =~ m{(<ul.*?/ul>)};
-        my $description = $links;
-        my $dtstart     = Date::ICal->new(
+        my $links = $1 if $footer =~ m{(<ul.*?/ul>)};
+        my %DESC;
+        $DESC{Schedule} = $url;
+        while ($links =~ m{<a [^>]*?href="([^"]+)"[^>]*>\s*([^<]+?)\s*<})
+        {
+          my $href = $1;
+          my $text = $2;
+          $DESC{$2} = $1;
+          $links = $';
+        }
+        my $desc = '<ul>';
+        foreach my $text (sort keys %DESC)
+        {
+          $desc .= sprintf('<li><a href="%s">%s</a></li>', $DESC{$text}, $text);
+        }
+        $desc .= '</ul>';
+        my $dtstart = Date::ICal->new(
           year   => $year,
           month  => $month,
           day    => $day,
@@ -200,7 +214,7 @@ sub event
         $dtstart =~ s{Z}{T000000Z} if $dtstart !~ m{T};
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
-          description     => $description,
+          description     => $desc,
           dtstart         => $dtstart,
           duration        => 'PT3H0M',
           'last-modified' => $now,

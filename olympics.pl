@@ -49,8 +49,9 @@ my $future = $http->GET($url)->on_done(
       my $summary;
       $summary = "[" . $METAL{$medalFlag} . "] " if $medalFlag;
       $summary .= $u->{'disciplineName'} . " " . $u->{'eventUnitName'};
+
       my $description = '<ul>';
-      $description .= '<li>' . $url . '</li>';
+      $description .= '<li><a href="' . $url . '">Details</a></li>';
       $description .= '<li>' . $u->{'locationDescription'} . '</li>';
       $description .= '</ul>';
 
