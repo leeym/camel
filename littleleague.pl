@@ -187,23 +187,25 @@ sub event
         warn "$year-$month-$day $hour:$min (America/New_York) $summary\n";
         my $links       = $1 if $footer =~ m{(<ul.*?/ul>)};
         my $description = $links;
-        my $vevent      = Data::ICal::Entry::Event->new();
+        my $dtstart     = Date::ICal->new(
+          year   => $year,
+          month  => $month,
+          day    => $day,
+          hour   => $hour,
+          min    => $min,
+          offset => '-0400'
+        )->ical;
+        $dtstart =~ s{Z}{T000000Z} if $dtstart !~ m{T};
+        my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
-          description => $description,
-          dtstart     => Date::ICal->new(
-            year   => $year,
-            month  => $month,
-            day    => $day,
-            hour   => $hour,
-            min    => $min,
-            offset => '-0400'
-          )->ical,
+          description     => $description,
+          dtstart         => $dtstart,
           duration        => 'PT3H0M',
           'last-modified' => $now,
           location        => $LOCATION{$type},
           summary         => $summary,
         );
-        $VEVENT{$game} = $vevent;
+        $VEVENT{$summary} = $vevent;
       }
     }
   );
