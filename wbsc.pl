@@ -235,10 +235,11 @@ foreach my $vevent (sort by_dtstart values %VEVENT)
 }
 my $vevent = Data::ICal::Entry::Event->new();
 $vevent->add_properties(
-  dtstart => Date::ICal->new(epoch => $start)->ical,
-  dtend   => Date::ICal->new(epoch => time)->ical,
-  summary => 'Last Modified',
-  uid     => 'Last Modified',
+  dtstart         => Date::ICal->new(epoch => $start)->ical,
+  dtend           => Date::ICal->new(epoch => time)->ical,
+  summary         => 'Last Modified',
+  uid             => 'Last Modified',
+  'last-modified' => $now,
 );
 $ics->add_entry($vevent);
 print $ics->as_string;
