@@ -202,7 +202,7 @@ sub team
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           description     => $description,
-          dtstart         => Date::ICal->new(epoch => $start_ts)->ical,
+          dtstart         => Date::ICal->new(epoch => $start_ts + 1)->ical,
           dtend           => Date::ICal->new(epoch => $end_ts)->ical,
           'last-modified' => $now,
           summary         => $summary,

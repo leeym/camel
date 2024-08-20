@@ -175,8 +175,8 @@ sub events
           day   => $day,
           hour  => $hour,
           mon   => $min,
+          sec   => 1,
         )->ical;
-        $dtstart =~ s{Z}{T000000Z} if $dtstart !~ m{T};
         warn "$start ($ENV{TZ}) $summary\n";
         my $duration = $g->{duration} || duration($summary);
         my ($hour, $min) = split(/\D/, $duration);

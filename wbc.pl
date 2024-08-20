@@ -153,7 +153,7 @@ sub event
           my $vevent = Data::ICal::Entry::Event->new();
           $vevent->add_properties(
             description     => $desc,
-            dtstart         => Date::ICal->new(epoch => $epoch)->ical,
+            dtstart         => Date::ICal->new(epoch => $epoch + 1)->ical,
             duration        => 'PT3H0M',
             'last-modified' => $now,
             location        => venue($g->{venue}),

@@ -210,9 +210,9 @@ sub event
           day    => $day,
           hour   => $hour,
           min    => $min,
+          sec    => 1,
           offset => '-0400'
         )->ical;
-        $dtstart =~ s{Z}{T000000Z} if $dtstart !~ m{T};
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           description     => $desc,
