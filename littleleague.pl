@@ -86,6 +86,14 @@ END
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
 }
 
+sub duration
+{
+  my $title = shift;
+  return 'PT1H30M' if $title =~ m{LLB};
+  return 'PT2H0M'  if $title =~ m{JLB};
+  return 'PT3H0M';
+}
+
 sub dtstart
 {
   my $vevent = shift;
@@ -217,7 +225,7 @@ sub event
         $vevent->add_properties(
           description     => $desc,
           dtstart         => $dtstart,
-          duration        => 'PT3H0M',
+          duration        => duration($title),
           'last-modified' => $now,
           location        => $LOCATION{$type},
           summary         => $summary,
