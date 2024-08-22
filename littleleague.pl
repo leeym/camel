@@ -82,7 +82,7 @@ print $ics->as_string;
 
 END
 {
-  die if !scalar(keys(%VEVENT));
+  die $? if !scalar(keys(%VEVENT));
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
 }
@@ -170,7 +170,7 @@ sub event
           $month = $MON{$1};
           $day   = sprintf("%02d", $2);
         }
-        die if !$day;
+        die $datetime if !$day;
 
         my $away;
         my $home;
