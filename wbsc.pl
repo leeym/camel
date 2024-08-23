@@ -27,7 +27,7 @@ my @FUTURE;
 my $start = time;
 my $now   = Date::ICal->new(epoch => $start)->ical;
 
-IO::Async::Loop->new()->add($http);
+my $loop = IO::Async::Loop->new();
 
 sub by_year
 {
@@ -122,7 +122,7 @@ sub year
   my $url    = "https://www.$domain.org/en/calendar/$yyyy/baseball";
   return if $START{$url};
   $START{$url} = time;
-  my $future = $http->GET($url)->on_done(
+  my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       my $url      = $response->request->url;
@@ -131,8 +131,8 @@ sub year
       warn "GET $url ($elapsed ms)\n";
       foreach my $url ($html =~ m{window.open\('([^']+)'}g)
       {
-        next if $url !~ m{/events/\d{4}-.*/home$};
-        $url =~ s,/home,/schedule-and-results,;
+        next if $url !~ m{/events/\d{4}-.*/\w+$};
+        $url =~ s{/\w+$}{/schedule-and-results};
         next if $START{$url};
         events($url);
       }
@@ -146,7 +146,7 @@ sub events
   my $url = shift;
   return if $START{$url};
   $START{$url} = time;
-  my $future = $http->GET($url)->on_done(
+  my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       my $url      = $response->request->url;
@@ -227,7 +227,8 @@ sub events
   push(@FUTURE, $future);
 }
 
-foreach my $yyyy (sort by_year (yyyy() - 10 .. yyyy() + 1))
+my @YEAR = (2012 .. yyyy() + 1);
+foreach my $yyyy (sort by_year @YEAR)
 {
   foreach my $domain ('wbsc', 'wbscasia')
   {
@@ -272,4 +273,15 @@ sub last_modified_description
     $html .= "<li>$url</li>";
   }
   return "<ul>$html</ul>";
+}
+
+sub http
+{
+  my $http = Net::Async::HTTP->new(
+    max_connections_per_host => 0,
+    max_in_flight            => 0,
+    timeout                  => $start + 28 - time,
+  );
+  $loop->add($http);
+  return $http;
 }

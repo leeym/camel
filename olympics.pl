@@ -16,17 +16,12 @@ use strict;
 
 my @YEAR = (2006 .. (localtime)[5] + 1901);
 my $ics  = new Data::ICal;
-my $http = Net::Async::HTTP->new(
-  max_connections_per_host => 0,
-  max_in_flight            => 0,
-  timeout                  => 20,
-);
 my %START;
 my %VEVENT;
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
 
-IO::Async::Loop->new()->add($http);
+my $loop = IO::Async::Loop->new();
 
 my $url = build_url(
   base_uri => 'https://sph-s-api.olympics.com',
@@ -38,7 +33,7 @@ $METAL{1} = 'Gold';
 $METAL{3} = 'Bronze';
 
 $START{$url} = time();
-my $future = $http->GET($url)->on_done(
+my $future = http()->GET($url)->on_done(
   sub {
     my $response = shift;
     my $elapsed  = int(($START{$url} - $start) * 1000);
@@ -139,4 +134,15 @@ sub last_modified_description
     $html .= "<li>$url</li>";
   }
   return "<ul>$html</ul>";
+}
+
+sub http
+{
+  my $http = Net::Async::HTTP->new(
+    max_connections_per_host => 0,
+    max_in_flight            => 0,
+    timeout                  => $start + 28 - time,
+  );
+  $loop->add($http);
+  return $http;
 }

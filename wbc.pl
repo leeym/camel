@@ -28,7 +28,7 @@ my $now   = Date::ICal->new(epoch => $start)->ical;
 my @FUTURE;
 my %START;
 
-IO::Async::Loop->new()->add($http);
+my $loop = IO::Async::Loop->new();
 
 foreach my $year (reverse sort @YEAR)
 {
@@ -128,7 +128,7 @@ sub event
 
   return if $START{$url};
   $START{$url} = time;
-  my $future = $http->GET($url)->on_done(
+  my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       my $url      = $response->request->url;
@@ -188,4 +188,15 @@ sub event
     }
   );
   push(@FUTURE, $future);
+}
+
+sub http
+{
+  my $http = Net::Async::HTTP->new(
+    max_connections_per_host => 0,
+    max_in_flight            => 0,
+    timeout                  => $start + 28 - time,
+  );
+  $loop->add($http);
+  return $http;
 }

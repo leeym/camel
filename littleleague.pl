@@ -17,13 +17,8 @@ use strict;
 
 my $yyyy = (localtime)[5] + 1900;
 
-my @YEAR = ($yyyy - 10 .. $yyyy);
+my @YEAR = (2017 .. $yyyy);
 my $ics  = new Data::ICal;
-my $http = Net::Async::HTTP->new(
-  max_connections_per_host => 0,
-  max_in_flight            => 0,
-  timeout                  => 20,
-);
 my @FUTURE;
 my %VEVENT;
 my $start = time();
@@ -50,7 +45,7 @@ $LOCATION{llbws} =
 $LOCATION{jlbws} =
   'Junior League World Series Field, Heritage Park, Taylor, MI';
 
-IO::Async::Loop->new()->add($http);
+my $loop = IO::Async::Loop->new();
 
 foreach my $year (reverse sort @YEAR)
 {
@@ -119,7 +114,7 @@ sub event
 
   return if $START{$url};
   $START{$url} = time;
-  my $future = $http->GET($url)->on_done(
+  my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       my $url      = $response->request->url;
@@ -258,4 +253,15 @@ sub captured_year
   capture "$type-$year" => sub {
     event($year, $type);
   }
+}
+
+sub http
+{
+  my $http = Net::Async::HTTP->new(
+    max_connections_per_host => 0,
+    max_in_flight            => 0,
+    timeout                  => $start + 28 - time,
+  );
+  $loop->add($http);
+  return $http;
 }

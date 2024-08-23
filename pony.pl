@@ -17,16 +17,11 @@ use strict;
 
 my @YEAR = (2006 .. (localtime)[5] + 1901);
 my $ics  = new Data::ICal;
-my $http = Net::Async::HTTP->new(
-  max_connections_per_host => 0,
-  max_in_flight            => 0,
-  timeout                  => 20,
-);
 my %VEVENT;
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical, my @FUTURE;
 my %START;
-IO::Async::Loop->new()->add($http);
+my $loop = IO::Async::Loop->new();
 
 captured_pony();
 
@@ -72,7 +67,7 @@ sub pony
   my $url = shift;
   return if $START{$url};
   $START{$url} = time;
-  my $future = $http->GET($url)->on_done(
+  my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       my $url      = $response->request->url;
@@ -95,7 +90,7 @@ sub schedules
   my $url = shift;
   return if $START{$url};
   $START{$url} = time;
-  my $future = $http->GET($url)->on_done(
+  my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       my $url      = $response->request->url;
@@ -122,7 +117,7 @@ sub event
   my $title = shift;
   return if $START{$url};
   $START{$url} = time;
-  my $future = $http->GET($url)->on_done(
+  my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       my $url      = $response->request->url;
@@ -147,7 +142,7 @@ sub teams
   my $title = shift;
   return if $START{$url};
   $START{$url} = time;
-  my $future = $http->GET($url)->on_done(
+  my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       my $url      = $response->request->url;
@@ -173,7 +168,7 @@ sub team
   my $url   = "https://api.team-manager.gc.com/public/teams/$id/games";
   return if $START{$url};
   $START{$url} = time;
-  my $future = $http->GET($url)->on_done(
+  my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       my $url      = $response->request->url;
@@ -245,4 +240,15 @@ sub last_modified_description
     $html .= "<li>$url</li>";
   }
   return "<ul>$html</ul>";
+}
+
+sub http
+{
+  my $http = Net::Async::HTTP->new(
+    max_connections_per_host => 0,
+    max_in_flight            => 0,
+    timeout                  => $start + 28 - time,
+  );
+  $loop->add($http);
+  return $http;
 }
