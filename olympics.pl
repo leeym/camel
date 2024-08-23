@@ -1,5 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
+use AWS::XRay qw(capture);
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
@@ -36,45 +37,47 @@ my %METAL;
 $METAL{1} = 'Gold';
 $METAL{3} = 'Bronze';
 
-my $future = $http->GET($url)->on_done(
-  sub {
-    my $response = shift;
-    my $elapsed  = int((time - $start) * 1000);
-    my $json     = $response->content;
-    my $data     = decode_json($json);
-    foreach my $u (@{ $data->{'units'} })
-    {
-      my $url       = 'https://olympics.com' . $u->{'extraData'}->{'detailUrl'};
-      my $medalFlag = $u->{'medalFlag'};
-      my $summary;
-      $summary = "[" . $METAL{$medalFlag} . "] " if $medalFlag;
-      $summary .= $u->{'disciplineName'} . " " . $u->{'eventUnitName'};
-
-      my $description = '<ul>';
-      $description .= '<li><a href="' . $url . '">Details</a></li>';
-      $description .= '<li>' . $u->{'locationDescription'} . '</li>';
-      $description .= '</ul>';
-
-      foreach my $c (@{ $u->{'competitors'} })
+capture "olympics" => sub {
+  my $future = $http->GET($url)->on_done(
+    sub {
+      my $response = shift;
+      my $elapsed  = int((time - $start) * 1000);
+      my $json     = $response->content;
+      my $data     = decode_json($json);
+      foreach my $u (@{ $data->{'units'} })
       {
-        next if $c->{'noc'} ne 'TPE';
-        $description .= $c->{'name'} . " " . results($c->{'results'}) . "\n";
+	my $url = 'https://olympics.com' . $u->{'extraData'}->{'detailUrl'};
+	my $medalFlag = $u->{'medalFlag'};
+	my $summary;
+	$summary = "[" . $METAL{$medalFlag} . "] " if $medalFlag;
+	$summary .= $u->{'disciplineName'} . " " . $u->{'eventUnitName'};
+
+	my $description = '<ul>';
+	$description .= '<li><a href="' . $url . '">Details</a></li>';
+	$description .= '<li>' . $u->{'locationDescription'} . '</li>';
+	$description .= '</ul>';
+
+	foreach my $c (@{ $u->{'competitors'} })
+	{
+	  next if $c->{'noc'} ne 'TPE';
+	  $description .= $c->{'name'} . " " . results($c->{'results'}) . "\n";
+	}
+	my $vevent = Data::ICal::Entry::Event->new();
+	$vevent->add_properties(
+	  uid             => $u->{id},
+	  url             => $url,
+	  location        => $u->{'venueDescription'},
+	  dtstart         => ical($u->{'startDate'}),
+	  dtend           => ical($u->{'endDate'}),
+	  summary         => $summary,
+	  description     => $description,
+	  'last-modified' => $now,
+	);
+	$VEVENT{ $u->{id} } = $vevent;
       }
-      my $vevent = Data::ICal::Entry::Event->new();
-      $vevent->add_properties(
-        uid             => $u->{id},
-        url             => $url,
-        location        => $u->{'venueDescription'},
-        dtstart         => ical($u->{'startDate'}),
-        dtend           => ical($u->{'endDate'}),
-        summary         => $summary,
-        description     => $description,
-        'last-modified' => $now,
-      );
-      $VEVENT{ $u->{id} } = $vevent;
     }
-  }
-);
+  );
+}
 await $future->get();
 
 foreach my $vevent (sort by_dtstart values %VEVENT)

@@ -1,5 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
+use AWS::XRay qw(capture);
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
@@ -27,7 +28,9 @@ my $now   = Date::ICal->new(epoch => $start)->ical, my @FUTURE;
 my %START;
 IO::Async::Loop->new()->add($http);
 
-home('https://www.pony.org/');
+capture "pony" => sub {
+  home('https://www.pony.org/');
+}
 
 while (scalar(@FUTURE))
 {

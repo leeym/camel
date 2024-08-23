@@ -1,5 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
+use AWS::XRay qw(capture);
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
@@ -219,7 +220,9 @@ foreach my $yyyy (sort by_year (yyyy() - 10 .. yyyy() + 1))
 {
   foreach my $domain ('wbsc', 'wbscasia')
   {
-    year("https://www.$domain.org/en/calendar/$yyyy/baseball");
+    capture "$domain-$yyyy" => sub {
+      year("https://www.$domain.org/en/calendar/$yyyy/baseball");
+    }
   }
 }
 
