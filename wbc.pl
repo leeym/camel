@@ -32,9 +32,7 @@ IO::Async::Loop->new()->add($http);
 
 foreach my $year (reverse sort @YEAR)
 {
-  capture "event-$year" => sub {
-    event($year);
-  }
+  captured_event($year);
 }
 
 while (scalar(@FUTURE))
@@ -53,6 +51,7 @@ $vevent->add_properties(
   dtend           => Date::ICal->new(epoch => time)->ical,
   summary         => 'Last Modified',
   uid             => 'Last Modified',
+  description     => last_modified_description(),
   'last-modified' => $now,
 );
 $ics->add_entry($vevent);
@@ -63,6 +62,16 @@ END
   die $@ if $@;
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
+}
+
+sub last_modified_description
+{
+  my $html;
+  foreach my $url (keys %START)
+  {
+    $html .= "<li>$url</li>";
+  }
+  return "<ul>$html</ul>";
 }
 
 sub venue
@@ -82,6 +91,14 @@ sub dtstart
 sub by_dtstart
 {
   return dtstart($a) cmp dtstart($b);
+}
+
+sub captured_event
+{
+  my $year = shift;
+  capture $year => sub {
+    event($year);
+  }
 }
 
 sub event

@@ -28,9 +28,7 @@ my $now   = Date::ICal->new(epoch => $start)->ical, my @FUTURE;
 my %START;
 IO::Async::Loop->new()->add($http);
 
-capture "pony" => sub {
-  home('https://www.pony.org/');
-}
+captured_pony();
 
 while (scalar(@FUTURE))
 {
@@ -48,6 +46,7 @@ $vevent->add_properties(
   dtend           => Date::ICal->new(epoch => time)->ical,
   summary         => 'Last Modified',
   uid             => 'Last Modified',
+  description     => last_modified_description(),
   'last-modified' => $now,
 );
 $ics->add_entry($vevent);
@@ -60,7 +59,15 @@ END
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
 }
 
-sub home
+sub captured_pony
+{
+  my $url = 'https://www.pony.org/';
+  capture "pony" => sub {
+    pony($url);
+  }
+}
+
+sub pony
 {
   my $url = shift;
   return if $START{$url};
@@ -228,4 +235,14 @@ sub dtstart
 sub by_dtstart
 {
   return dtstart($a) cmp dtstart($b);
+}
+
+sub last_modified_description
+{
+  my $html;
+  foreach my $url (keys %START)
+  {
+    $html .= "<li>$url</li>";
+  }
+  return "<ul>$html</ul>";
 }

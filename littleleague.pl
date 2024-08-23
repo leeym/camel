@@ -57,9 +57,7 @@ foreach my $year (reverse sort @YEAR)
   my @TYPE = qw(llbws jlbws);
   for my $type (@TYPE)
   {
-    capture "$type-$year" => sub {
-      event($year, $type);
-    }
+    captured_year($type, $year);
   }
 }
 
@@ -78,6 +76,7 @@ $vevent->add_properties(
   dtend           => Date::ICal->new(epoch => time)->ical,
   summary         => 'Last Modified',
   uid             => 'Last Modified',
+  description     => last_modified_description(),
   'last-modified' => $now,
 );
 $ics->add_entry($vevent);
@@ -240,4 +239,23 @@ sub event
     }
   );
   push(@FUTURE, $future);
+}
+
+sub last_modified_description
+{
+  my $html;
+  foreach my $url (keys %START)
+  {
+    $html .= "<li>$url</li>";
+  }
+  return "<ul>$html</ul>";
+}
+
+sub captured_year
+{
+  my $type = shift;
+  my $year = shift;
+  capture "$type-$year" => sub {
+    event($year, $type);
+  }
 }

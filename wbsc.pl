@@ -106,9 +106,20 @@ sub duration
   return '3:00';
 }
 
+sub captured_year
+{
+  my $domain = shift;
+  my $yyyy   = shift;
+  capture "$domain-$yyyy" => sub {
+    year($domain, $yyyy);
+  }
+}
+
 sub year
 {
-  my $url = shift;
+  my $domain = shift;
+  my $yyyy   = shift;
+  my $url    = "https://www.$domain.org/en/calendar/$yyyy/baseball";
   return if $START{$url};
   $START{$url} = time;
   my $future = $http->GET($url)->on_done(
@@ -220,9 +231,7 @@ foreach my $yyyy (sort by_year (yyyy() - 10 .. yyyy() + 1))
 {
   foreach my $domain ('wbsc', 'wbscasia')
   {
-    capture "$domain-$yyyy" => sub {
-      year("https://www.$domain.org/en/calendar/$yyyy/baseball");
-    }
+    captured_year($domain, $yyyy);
   }
 }
 
@@ -242,6 +251,7 @@ $vevent->add_properties(
   dtend           => Date::ICal->new(epoch => time)->ical,
   summary         => 'Last Modified',
   uid             => 'Last Modified',
+  description     => last_modified_description(),
   'last-modified' => $now,
 );
 $ics->add_entry($vevent);
@@ -252,4 +262,14 @@ END
   die $@ if $@;
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
+}
+
+sub last_modified_description
+{
+  my $html;
+  foreach my $url (keys %START)
+  {
+    $html .= "<li>$url</li>";
+  }
+  return "<ul>$html</ul>";
 }
