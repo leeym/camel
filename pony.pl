@@ -23,7 +23,7 @@ my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
 
-captured(undef, \&pony, 'https://www.pony.org/');
+captured($ENV{_X_AMZN_TRACE_ID}, \&pony, 'https://www.pony.org/');
 
 for my $future (@FUTURE)
 {
@@ -66,7 +66,7 @@ sub pony
         path     => $1,
       ) if $html =~ m{<a [^>]*href="([^"]+)">Baseball World Series</a>};
       return if !$next;
-      captured($SEGMENT{$url}, \&schedules, $next);
+      captured($SEGMENT{$url}->trace_header, \&schedules, $next);
     }
   );
   push(@FUTURE, $future);
@@ -87,7 +87,7 @@ sub schedules
         $html = $';
         next if $text !~ m{World Series};
         next if $text !~ m{1(2|4|8)U};
-        captured($SEGMENT{$url}, \&event, $href, $text);
+        captured($SEGMENT{$url}->trace_header, \&event, $href, $text);
       }
     }
   );
@@ -109,7 +109,7 @@ sub event
         path     => $1,
       ) if $html =~ m{<a [^>]*href="([^"]+)">GameChanger[^<]*</a>};
       return if !$next;
-      captured($SEGMENT{$url}, \&teams, $next, $title);
+      captured($SEGMENT{$url}->trace_header, \&teams, $next, $title);
     }
   );
   push(@FUTURE, $future);
@@ -130,7 +130,7 @@ sub teams
       $name =~ s{Chinese Taipei}{Taiwan};
       return if !$id;
       my $next = "https://api.team-manager.gc.com/public/teams/$id/games";
-      captured($SEGMENT{$url}, \&team, $next, $id, $name, $title);
+      captured($SEGMENT{$url}->trace_header, \&team, $next, $id, $name, $title);
     }
   );
   push(@FUTURE, $future);
@@ -248,7 +248,7 @@ sub segment
 
 sub captured
 {
-  my $parent = shift;
+  my $header = shift;
   my $func   = shift;
   my @args   = @_;
   my $url    = $args[0];
@@ -260,9 +260,9 @@ sub captured
   };
   my $name = $url;
   $name =~ s{\?}{#}g;
-  if ($parent)
+  if ($header)
   {
-    capture_from $parent->trace_header, $name => $code;
+    capture_from $header, $name => $code;
   }
   else
   {

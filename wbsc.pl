@@ -28,7 +28,7 @@ for my $yyyy (sort by_year @YEAR)
   for my $domain ('wbsc', 'wbscasia')
   {
     my $url = "https://www.$domain.org/en/calendar/$yyyy/baseball";
-    captured(undef, \&year, $url);
+    captured($ENV{_X_AMZN_TRACE_ID}, \&year, $url);
   }
 }
 
@@ -277,7 +277,7 @@ sub segment
 
 sub captured
 {
-  my $parent = shift;
+  my $header = shift;
   my $func   = shift;
   my @args   = @_;
   my $url    = $args[0];
@@ -289,9 +289,9 @@ sub captured
   };
   my $name = $url;
   $name =~ s{\?}{#}g;
-  if ($parent)
+  if ($header)
   {
-    capture_from $parent->trace_header, $name => $code;
+    capture_from $header, $name => $code;
   }
   else
   {

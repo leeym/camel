@@ -53,7 +53,7 @@ for my $year (reverse sort @YEAR)
       base_uri => 'https://www.littleleague.org',
       path     => "/world-series/$year/$type/teams/asia-pacific-region/",
     );
-    captured(undef, \&event, $url, $type, $year);
+    captured($ENV{_X_AMZN_TRACE_ID}, \&event, $url, $type, $year);
   }
 }
 
@@ -273,7 +273,7 @@ sub segment
 
 sub captured
 {
-  my $parent = shift;
+  my $header = shift;
   my $func   = shift;
   my @args   = @_;
   my $url    = $args[0];
@@ -285,9 +285,9 @@ sub captured
   };
   my $name = $url;
   $name =~ s{\?}{#}g;
-  if ($parent)
+  if ($header)
   {
-    capture_from $parent->trace_header, $name => $code;
+    capture_from $header, $name => $code;
   }
   else
   {

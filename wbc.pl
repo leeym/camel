@@ -35,7 +35,7 @@ for my $year (reverse sort @YEAR)
       endDate   => "$year-12-31",
     ],
   );
-  captured(undef, \&event, $url);
+  captured($ENV{_X_AMZN_TRACE_ID}, \&event, $url);
 }
 
 for my $future (@FUTURE)
@@ -193,7 +193,7 @@ sub segment
 
 sub captured
 {
-  my $parent = shift;
+  my $header = shift;
   my $func   = shift;
   my @args   = @_;
   my $url    = $args[0];
@@ -205,9 +205,9 @@ sub captured
   };
   my $name = $url;
   $name =~ s{\?}{#}g;
-  if ($parent)
+  if ($header)
   {
-    capture_from $parent->trace_header, $name => $code;
+    capture_from $header, $name => $code;
   }
   else
   {
