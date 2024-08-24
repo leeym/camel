@@ -19,142 +19,143 @@ my $base = "http://$ENV{AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation";
 
 while (1)
 {
-    my $next   = request("$base/next");
-    my $req_id = $next->{headers}->{'lambda-runtime-aws-request-id'};
-    die 'cannot take the Lambda request ID' if !$req_id;
-    my $content = handle(decode_json($next->{content}));
-    request("$base/$req_id/response", { content => encode_json($content) });
+  my $next = request("$base/next");
+  warn Dumper($next);
+  my $req_id = $next->{headers}->{'lambda-runtime-aws-request-id'};
+  die 'cannot take the Lambda request ID' if !$req_id;
+  my $content = handle(decode_json($next->{content}));
+  request("$base/$req_id/response", { content => encode_json($content) });
 }
 
 sub request
 {
-    my $url   = shift;
-    my $query = shift;
-    my $res   = $query ? $http->post($url, $query) : $http->get($url);
-    die "$url: $res->{status} $res->{reason}" if !$res->{success};
-    return $res;
+  my $url   = shift;
+  my $query = shift;
+  my $res   = $query ? $http->post($url, $query) : $http->get($url);
+  die "$url: $res->{status} $res->{reason}" if !$res->{success};
+  return $res;
 }
 
 sub parse
 {
-    my $payload = shift;
-    warn Dumper($payload);
-    my %P;
-    if ($payload->{httpMethod} eq 'GET')
+  my $payload = shift;
+  warn Dumper($payload);
+  my %P;
+  if ($payload->{httpMethod} eq 'GET')
+  {
+    if ($payload->{multiValueQueryStringParameters})
     {
-        if ($payload->{multiValueQueryStringParameters})
-        {
-            %P = %{ $payload->{multiValueQueryStringParameters} };
-        }
+      %P = %{ $payload->{multiValueQueryStringParameters} };
     }
-    elsif ($payload->{httpMethod} eq 'POST')
+  }
+  elsif ($payload->{httpMethod} eq 'POST')
+  {
+    foreach my $pair (split('&', $payload->{'body'}))
     {
-        foreach my $pair (split('&', $payload->{'body'}))
-        {
-            my ($k, $v) = split('=', $pair);
-            push(@{ $P{$k} }, $v);
-        }
+      my ($k, $v) = split('=', $pair);
+      push(@{ $P{$k} }, $v);
     }
-    else
-    {
-        die 'Unsupported method: ' . $payload->{httpMethod};
-    }
+  }
+  else
+  {
+    die 'Unsupported method: ' . $payload->{httpMethod};
+  }
 
-    my %Q;
-    foreach my $k (keys %P)
-    {
-        next if $k ne 'q' && $k !~ m{^p\d+$};
-        my @V = @{ $P{$k} };
-        die "Multiple '$k': ['" . join("', '", @V) . "']\n" if scalar(@V) > 1;
-        $Q{$k} = shift @V;
-    }
-    return %Q;
+  my %Q;
+  foreach my $k (keys %P)
+  {
+    next if $k ne 'q' && $k !~ m{^p\d+$};
+    my @V = @{ $P{$k} };
+    die "Multiple '$k': ['" . join("', '", @V) . "']\n" if scalar(@V) > 1;
+    $Q{$k} = shift @V;
+  }
+  return %Q;
 }
 
 sub discover
 {
-    my %Q = @_;
-    my @ARG;
-    push(@ARG, '/opt/bin/perl');
-    if (!$Q{q})
+  my %Q = @_;
+  my @ARG;
+  push(@ARG, '/opt/bin/perl');
+  if (!$Q{q})
+  {
+    push(@ARG, 'help.pl');
+  }
+  else
+  {
+    my $script;
+    if (-f $Q{q})
     {
-        push(@ARG, 'help.pl');
+      $script = $Q{q};
+    }
+    elsif (-f $Q{q} . '.pl')
+    {
+      $script = $Q{q} . '.pl';
     }
     else
     {
-        my $script;
-        if (-f $Q{q})
-        {
-            $script = $Q{q};
-        }
-        elsif (-f $Q{q} . '.pl')
-        {
-            $script = $Q{q} . '.pl';
-        }
-        else
-        {
-            die "$Q{q} not found\n";
-        }
-        push(@ARG, $script);
-        for (my $i = 0; exists($Q{"p$i"}); $i++)
-        {
-            push(@ARG, $Q{"p$i"});
-        }
+      die "$Q{q} not found\n";
     }
-    return "@ARG";
+    push(@ARG, $script);
+    for (my $i = 0; exists($Q{"p$i"}); $i++)
+    {
+      push(@ARG, $Q{"p$i"});
+    }
+  }
+  return "@ARG";
 }
 
 sub handle
 {
-    my $payload = shift;
-    my $context = shift;
-    my %JSON;
-    $JSON{statusCode}              = 200;
-    $JSON{isBase64Encoded}         = \0;
-    $JSON{headers}{'Content-Type'} = 'text/plain';
+  my $payload = shift;
+  my $context = shift;
+  my %JSON;
+  $JSON{statusCode}              = 200;
+  $JSON{isBase64Encoded}         = \0;
+  $JSON{headers}{'Content-Type'} = 'text/plain';
 
-    eval {
-        # parse payload and return query hash
-        my %Q;
-        eval { %Q = parse($payload); };
-        if ($@)
-        {
-            $JSON{statusCode} = 400;    # HTTP_BAD_REQUEST
-            $JSON{body}       = $@;
-            return \%JSON;
-        }
-
-        # construct command based on query hash
-        my $cmd;
-        eval { $cmd = discover(%Q); };
-        if ($@)
-        {
-            $JSON{statusCode} = 404;    # HTTP_NOT_FOUND
-            $JSON{body}       = $@;
-            return \%JSON;
-        }
-
-        # execute command and return result
-        warn "COMMAND: $cmd\n";
-        my ($stdout, $stderr, $exit) = capture { system($cmd); };
-        if ($exit)
-        {
-            $JSON{statusCode} = 500;       # HTTP_INTERNAL_SERVER_ERROR
-            $JSON{body}       = $stderr;
-        }
-        else
-        {
-            $JSON{statusCode} = 200;       # HTTP_OK
-            $JSON{body}       = $stdout;
-            warn $stderr if $stderr;
-        }
-    };
+  eval {
+    # parse payload and return query hash
+    my %Q;
+    eval { %Q = parse($payload); };
     if ($@)
     {
-        $JSON{statusCode} = 501;    # HTTP_NOT_IMPLEMENTED
-        $JSON{body}       = $@;
+      $JSON{statusCode} = 400;    # HTTP_BAD_REQUEST
+      $JSON{body}       = $@;
+      return \%JSON;
     }
-    return \%JSON;
+
+    # construct command based on query hash
+    my $cmd;
+    eval { $cmd = discover(%Q); };
+    if ($@)
+    {
+      $JSON{statusCode} = 404;    # HTTP_NOT_FOUND
+      $JSON{body}       = $@;
+      return \%JSON;
+    }
+
+    # execute command and return result
+    warn "COMMAND: $cmd\n";
+    my ($stdout, $stderr, $exit) = capture { system($cmd); };
+    if ($exit)
+    {
+      $JSON{statusCode} = 500;       # HTTP_INTERNAL_SERVER_ERROR
+      $JSON{body}       = $stderr;
+    }
+    else
+    {
+      $JSON{statusCode} = 200;       # HTTP_OK
+      $JSON{body}       = $stdout;
+      warn $stderr if $stderr;
+    }
+  };
+  if ($@)
+  {
+    $JSON{statusCode} = 501;    # HTTP_NOT_IMPLEMENTED
+    $JSON{body}       = $@;
+  }
+  return \%JSON;
 }
 
 __END__
