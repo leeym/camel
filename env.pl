@@ -5,9 +5,9 @@ use Data::Printer use_prototypes => 0;
 use Switch;
 
 my $mode = shift;
-foreach my $key (keys %ENV)
+foreach my $key (qw(AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN))
 {
-  #delete($ENV{$key}) if $key =~ m{^AWS_};
+  delete($ENV{$key});
 }
 
 switch ($mode)
