@@ -7,7 +7,7 @@ use Switch;
 my $mode = shift;
 foreach my $key (keys %ENV)
 {
-  delete($ENV{$key}) if $key =~ m{^AWS_};
+  #delete($ENV{$key}) if $key =~ m{^AWS_};
 }
 
 switch ($mode)
