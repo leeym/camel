@@ -14,15 +14,52 @@ use POSIX       qw(mktime);
 use Time::HiRes qw(time);
 use strict;
 
-my $ics = new Data::ICal;
-my %URL;
-my %VEVENT;
-my %SEGMENT;
-my @FUTURE;
 my $start = time;
 my $now   = Date::ICal->new(epoch => $start)->ical;
+my $loop  = new IO::Async::Loop;
+my $ics   = new Data::ICal;
+my %SEGMENT;
+my %VEVENT;
+my @FUTURE;
+my @YEAR = (2012 .. yyyy() + 1);
 
-my $loop = IO::Async::Loop->new();
+foreach my $yyyy (sort by_year @YEAR)
+{
+  foreach my $domain ('wbsc', 'wbscasia')
+  {
+    my $url = "https://www.$domain.org/en/calendar/$yyyy/baseball";
+    captured(undef, \&year, $url);
+  }
+}
+
+while (scalar(@FUTURE))
+{
+  my $future = shift @FUTURE;
+  await $future->get();
+}
+
+foreach my $vevent (sort by_dtstart values %VEVENT)
+{
+  $ics->add_entry($vevent);
+}
+my $vevent = Data::ICal::Entry::Event->new();
+$vevent->add_properties(
+  dtstart         => Date::ICal->new(epoch => $start)->ical,
+  dtend           => Date::ICal->new(epoch => time)->ical,
+  summary         => 'Last Modified',
+  uid             => 'Last Modified',
+  description     => last_modified_description(),
+  'last-modified' => $now,
+);
+$ics->add_entry($vevent);
+print $ics->as_string;
+
+END
+{
+  die $@ if $@;
+  warn "Total: " . scalar(keys %VEVENT) . " events\n";
+  warn "Duration: " . int((time - $start) * 1000) . " ms\n";
+}
 
 sub by_year
 {
@@ -195,45 +232,6 @@ sub events
     }
   );
   push(@FUTURE, $future);
-}
-
-my @YEAR = (2012 .. yyyy() + 1);
-foreach my $yyyy (sort by_year @YEAR)
-{
-  foreach my $domain ('wbsc', 'wbscasia')
-  {
-    my $url = "https://www.$domain.org/en/calendar/$yyyy/baseball";
-    captured(undef, \&year, $url);
-  }
-}
-
-while (scalar(@FUTURE))
-{
-  my $future = shift @FUTURE;
-  await $future->get();
-}
-
-foreach my $vevent (sort by_dtstart values %VEVENT)
-{
-  $ics->add_entry($vevent);
-}
-my $vevent = Data::ICal::Entry::Event->new();
-$vevent->add_properties(
-  dtstart         => Date::ICal->new(epoch => $start)->ical,
-  dtend           => Date::ICal->new(epoch => time)->ical,
-  summary         => 'Last Modified',
-  uid             => 'Last Modified',
-  description     => last_modified_description(),
-  'last-modified' => $now,
-);
-$ics->add_entry($vevent);
-print $ics->as_string;
-
-END
-{
-  die $@ if $@;
-  warn "Total: " . scalar(keys %VEVENT) . " events\n";
-  warn "Duration: " . int((time - $start) * 1000) . " ms\n";
 }
 
 sub last_modified_description

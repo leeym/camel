@@ -15,13 +15,13 @@ use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
 
-my @YEAR = (2006 .. (localtime)[5] + 1901);
-my $ics  = new Data::ICal;
-my %VEVENT;
 my $start = time();
-my $now   = Date::ICal->new(epoch => $start)->ical, my @FUTURE;
+my $now   = Date::ICal->new(epoch => $start)->ical;
+my $loop  = new IO::Async::Loop;
+my $ics   = new Data::ICal;
 my %SEGMENT;
-my $loop = IO::Async::Loop->new();
+my %VEVENT;
+my @FUTURE;
 
 captured(undef, \&pony, 'https://www.pony.org/');
 

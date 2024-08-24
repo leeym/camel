@@ -15,24 +15,23 @@ use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
 
-my @YEAR = (2006 .. (localtime)[5] + 1901);
-my $ics  = new Data::ICal;
+my $start = time();
+my $now   = Date::ICal->new(epoch => $start)->ical;
+my $ics   = new Data::ICal;
+my $loop  = IO::Async::Loop->new();
 my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
-my $start = time();
-my $now   = Date::ICal->new(epoch => $start)->ical;
 
-my $loop = IO::Async::Loop->new();
+my %METAL = (
+  1 => 'Gold',
+  3 => 'Bronze',
+);
 
 my $url = build_url(
   base_uri => 'https://sph-s-api.olympics.com',
   path     => '/summer/schedules/api/ENG/schedule/noc/TPE',
 );
-
-my %METAL;
-$METAL{1} = 'Gold';
-$METAL{3} = 'Bronze';
 
 captured(undef, \&olympics, $url);
 

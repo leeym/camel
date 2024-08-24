@@ -15,20 +15,14 @@ use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
 
-my @YEAR = (2006, 2009, 2012, 2013, 2017, 2023, 2026);
-my $ics  = new Data::ICal;
-my $http = Net::Async::HTTP->new(
-  max_connections_per_host => 0,
-  max_in_flight            => 0,
-  timeout                  => 20,
-);
-my %VEVENT;
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
-my @FUTURE;
+my $loop  = new IO::Async::Loop;
+my $ics   = new Data::ICal;
 my %SEGMENT;
-
-my $loop = IO::Async::Loop->new();
+my %VEVENT;
+my @FUTURE;
+my @YEAR = (2006, 2009, 2012, 2013, 2017, 2023, 2026);
 
 foreach my $year (reverse sort @YEAR)
 {
@@ -39,19 +33,6 @@ foreach my $year (reverse sort @YEAR)
       sportId   => 51,
       startDate => "$year-01-01",
       endDate   => "$year-12-31",
-
-      #stitch_env => 'prod',
-      #sortTemplate => 5,
-      #gameType     => 'A',
-      #gameType     => 'D',
-      #gameType     => 'F',
-      #gameType     => 'L',
-      #gameType     => 'R',
-      #gameType     => 'S',
-      #gameType     => 'W',
-      #language => 'en',
-      #leagueId => 159,
-      #leagueId => 160,
     ],
   );
   captured(undef, \&event, $url);

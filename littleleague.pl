@@ -15,37 +15,34 @@ use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
 
-my $yyyy = (localtime)[5] + 1900;
-
-my @YEAR = (2017 .. $yyyy);
-my $ics  = new Data::ICal;
-my @FUTURE;
-my %VEVENT;
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
+my $loop  = new IO::Async::Loop;
+my $ics   = new Data::ICal;
 my %SEGMENT;
+my %VEVENT;
+my @FUTURE;
+my @YEAR = (2017 .. (localtime)[5] + 1900);
 
-my %MON;
-$MON{January}   = '01';
-$MON{Febrery}   = '02';
-$MON{March}     = '03';
-$MON{April}     = '04';
-$MON{May}       = '05';
-$MON{June}      = '06';
-$MON{July}      = '07';
-$MON{August}    = '08';
-$MON{September} = '09';
-$MON{October}   = '10';
-$MON{November}  = '11';
-$MON{December}  = '12';
+my %MON = (
+  January   => '01',
+  Febrery   => '02',
+  March     => '03',
+  April     => '04',
+  May       => '05',
+  June      => '06',
+  July      => '07',
+  August    => '08',
+  September => '09',
+  October   => '10',
+  November  => '11',
+  December  => '12',
+);
 
-my %LOCATION;
-$LOCATION{llbws} =
-  'Little League International Complex, South Williamsport, PA';
-$LOCATION{jlbws} =
-  'Junior League World Series Field, Heritage Park, Taylor, MI';
-
-my $loop = IO::Async::Loop->new();
+my %LOCATION = (
+  llbws => 'Little League International Complex, South Williamsport, PA',
+  jlbws => 'Junior League World Series Field, Heritage Park, Taylor, MI',
+);
 
 foreach my $year (reverse sort @YEAR)
 {
