@@ -24,7 +24,7 @@ my %VEVENT;
 my @FUTURE;
 my @YEAR = (2006, 2009, 2012, 2013, 2017, 2023, 2026);
 
-foreach my $year (reverse sort @YEAR)
+for my $year (reverse sort @YEAR)
 {
   my $url = build_url(
     base_uri => 'https://bdfed.stitch.mlbinfra.com',
@@ -38,13 +38,12 @@ foreach my $year (reverse sort @YEAR)
   captured(undef, \&event, $url);
 }
 
-while (scalar(@FUTURE))
+for my $future (@FUTURE)
 {
-  my $future = shift @FUTURE;
   await $future->get();
 }
 
-foreach my $vevent (sort by_dtstart values %VEVENT)
+for my $vevent (sort by_dtstart values %VEVENT)
 {
   $ics->add_entry($vevent);
 }
@@ -70,7 +69,7 @@ END
 sub last_modified_description
 {
   my $html;
-  foreach my $url (keys %SEGMENT)
+  for my $url (keys %SEGMENT)
   {
     $html .= "<li>$url</li>";
   }
@@ -106,10 +105,10 @@ sub event
       my $json = $response->content;
       my $data = decode_json($json);
 
-      foreach my $date (@{ $data->{dates} })
+      for my $date (@{ $data->{dates} })
       {
         next if $date->{totalGames} == 0;
-        foreach my $g (@{ $date->{games} })
+        for my $g (@{ $date->{games} })
         {
           next if $VEVENT{ $g->{gamePk} };
           my $tpe  = 'Chinese Taipei';
@@ -134,7 +133,7 @@ sub event
           my %DESC;
           $DESC{Gameday} = $gameday;
           my $desc = '<ul>';
-          foreach my $text (sort keys %DESC)
+          for my $text (sort keys %DESC)
           {
             $desc .= '<li>';
             $desc .= sprintf('<a href="%s">%s</a>', $DESC{$text}, $text);

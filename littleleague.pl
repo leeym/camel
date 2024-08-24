@@ -44,7 +44,7 @@ my %LOCATION = (
   jlbws => 'Junior League World Series Field, Heritage Park, Taylor, MI',
 );
 
-foreach my $year (reverse sort @YEAR)
+for my $year (reverse sort @YEAR)
 {
   my @TYPE = qw(llbws jlbws);
   for my $type (@TYPE)
@@ -62,7 +62,7 @@ for my $future (@FUTURE)
   await $future->get();
 }
 
-foreach my $vevent (sort by_dtstart values %VEVENT)
+for my $vevent (sort by_dtstart values %VEVENT)
 {
   $ics->add_entry($vevent);
 }
@@ -198,7 +198,7 @@ sub event
           $links = $';
         }
         my $desc = '<ul>';
-        foreach my $text (sort keys %DESC)
+        for my $text (sort keys %DESC)
         {
           $desc .= sprintf('<li><a href="%s">%s</a></li>', $DESC{$text}, $text);
         }
@@ -232,7 +232,7 @@ sub event
 sub last_modified_description
 {
   my $html;
-  foreach my $url (keys %SEGMENT)
+  for my $url (keys %SEGMENT)
   {
     $html .= "<li>$url</li>";
   }

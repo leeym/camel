@@ -25,13 +25,12 @@ my @FUTURE;
 
 captured(undef, \&pony, 'https://www.pony.org/');
 
-while (scalar(@FUTURE))
+for my $future (@FUTURE)
 {
-  my $future = shift @FUTURE;
   await $future->get();
 }
 
-foreach my $vevent (sort by_dtstart values %VEVENT)
+for my $vevent (sort by_dtstart values %VEVENT)
 {
   $ics->add_entry($vevent);
 }
@@ -149,7 +148,7 @@ sub team
       segment($response);
       my $json = $response->content;
       my $data = decode_json($json);
-      foreach my $g (@{$data})
+      for my $g (@{$data})
       {
         next if $VEVENT{ $g->{id} };
 
@@ -208,7 +207,7 @@ sub by_dtstart
 sub last_modified_description
 {
   my $html;
-  foreach my $url (keys %SEGMENT)
+  for my $url (keys %SEGMENT)
   {
     $html .= "<li>$url</li>";
   }

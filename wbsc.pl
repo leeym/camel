@@ -23,22 +23,21 @@ my %VEVENT;
 my @FUTURE;
 my @YEAR = (2012 .. yyyy() + 1);
 
-foreach my $yyyy (sort by_year @YEAR)
+for my $yyyy (sort by_year @YEAR)
 {
-  foreach my $domain ('wbsc', 'wbscasia')
+  for my $domain ('wbsc', 'wbscasia')
   {
     my $url = "https://www.$domain.org/en/calendar/$yyyy/baseball";
     captured(undef, \&year, $url);
   }
 }
 
-while (scalar(@FUTURE))
+for my $future (@FUTURE)
 {
-  my $future = shift @FUTURE;
   await $future->get();
 }
 
-foreach my $vevent (sort by_dtstart values %VEVENT)
+for my $vevent (sort by_dtstart values %VEVENT)
 {
   $ics->add_entry($vevent);
 }
@@ -85,7 +84,7 @@ sub tz
   return $g->{start_tz} if $g->{start_tz};
   my $country = '';
   $country = $1 if ($g->{location} =~ m{\(([A-Z]{3})\)});
-  foreach my $venue (@{ $t->{venues} })
+  for my $venue (@{ $t->{venues} })
   {
     next if $venue->{id} != $g->{venueid};
     return decode_json($venue->{info})->{timezone}->{timezone}
@@ -140,7 +139,7 @@ sub year
       my $response = shift;
       segment($response);
       my $html = $response->content;
-      foreach my $next ($html =~ m{window.open\('([^']+)'}g)
+      for my $next ($html =~ m{window.open\('([^']+)'}g)
       {
         next if $next !~ m{/events/\d{4}-.*/\w+$};
         $next =~ s{/\w+$}{/schedule-and-results};
@@ -167,7 +166,7 @@ sub events
       my $d = decode_json($data);
       my $t = $d->{props}->{tournament};
 
-      foreach my $g (@{ $d->{props}->{games} })
+      for my $g (@{ $d->{props}->{games} })
       {
         next if $VEVENT{ $g->{id} };
         next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
@@ -210,7 +209,7 @@ sub events
         $DESC{'Watch'}     = $g->{gamevideo} if $g->{gamevideo};
 
         my $desc = '<ul>';
-        foreach my $text (sort keys %DESC)
+        for my $text (sort keys %DESC)
         {
           $desc .= sprintf('<li><a href="%s">%s</a></li>', $DESC{$text}, $text);
         }
@@ -237,7 +236,7 @@ sub events
 sub last_modified_description
 {
   my $html;
-  foreach my $url (keys %SEGMENT)
+  for my $url (keys %SEGMENT)
   {
     $html .= "<li>$url</li>";
   }

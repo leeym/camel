@@ -44,7 +44,7 @@ sub olympics
       segment($response);
       my $json = $response->content;
       my $data = decode_json($json);
-      foreach my $u (@{ $data->{'units'} })
+      for my $u (@{ $data->{'units'} })
       {
         my $url = 'https://olympics.com' . $u->{'extraData'}->{'detailUrl'};
         my $medalFlag = $u->{'medalFlag'};
@@ -57,7 +57,7 @@ sub olympics
         $description .= '<li>' . $u->{'locationDescription'} . '</li>';
         $description .= '</ul>';
 
-        foreach my $c (@{ $u->{'competitors'} })
+        for my $c (@{ $u->{'competitors'} })
         {
           next if $c->{'noc'} ne 'TPE';
           $description .= $c->{'name'} . " " . results($c->{'results'}) . "\n";
@@ -80,13 +80,13 @@ sub olympics
   push(@FUTURE, $future);
 }
 
-foreach my $future (@FUTURE)
+for my $future (@FUTURE)
 {
   my $future = shift @FUTURE;
   await $future->get();
 }
 
-foreach my $vevent (sort by_dtstart values %VEVENT)
+for my $vevent (sort by_dtstart values %VEVENT)
 {
   $ics->add_entry($vevent);
 }
@@ -141,7 +141,7 @@ sub by_dtstart
 sub last_modified_description
 {
   my $html;
-  foreach my $url (keys %SEGMENT)
+  for my $url (keys %SEGMENT)
   {
     $html .= "<li>$url</li>";
   }
