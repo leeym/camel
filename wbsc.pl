@@ -17,11 +17,6 @@ use strict;
 my $ics = new Data::ICal;
 my %URL;
 my %VEVENT;
-my $http = Net::Async::HTTP->new(
-  max_connections_per_host => 0,
-  max_in_flight            => 0,
-  timeout                  => 20,
-);
 my %START;
 my @FUTURE;
 my $start = time;
@@ -44,12 +39,6 @@ sub dtstart
 sub by_dtstart
 {
   return dtstart($a) cmp dtstart($b);
-}
-
-sub mmdd
-{
-  my ($dd, $mm, $yy) = split('/', shift);
-  return "$yy-$mm-$dd";
 }
 
 sub tz
@@ -110,24 +99,27 @@ sub captured_year
 {
   my $domain = shift;
   my $yyyy   = shift;
+  my $url    = "https://www.$domain.org/en/calendar/$yyyy/baseball";
   capture "$domain-$yyyy" => sub {
-    year($domain, $yyyy);
+    my $segment = shift;
+    year($url, $segment);
   }
 }
 
 sub year
 {
-  my $domain = shift;
-  my $yyyy   = shift;
-  my $url    = "https://www.$domain.org/en/calendar/$yyyy/baseball";
+  my $url     = shift;
+  my $segment = shift;
   return if $START{$url};
   $START{$url} = time;
+  $segment->{start_time} = $START{$url};
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      my $url      = $response->request->url;
-      my $html     = $response->content;
-      my $elapsed  = int((time - $START{$url}) * 1000);
+      $segment = wrapped($segment, $response);
+      my $url     = $response->request->url;
+      my $html    = $response->content;
+      my $elapsed = elapsed($segment);
       warn "GET $url ($elapsed ms)\n";
       foreach my $url ($html =~ m{window.open\('([^']+)'}g)
       {
@@ -141,19 +133,37 @@ sub year
   push(@FUTURE, $future);
 }
 
-sub events
+sub captured_event
 {
   my $url = shift;
+  capture "schedule" => sub {
+    my $segment = shift;
+    $segment->{http} = {
+      request => {
+        method => 'GET',
+        url    => $url,
+      },
+    };
+    events($url, $segment);
+  }
+}
+
+sub events
+{
+  my $url     = shift;
+  my $segment = shift;
   return if $START{$url};
   $START{$url} = time;
+  $segment->{start_time} = $START{$url};
   my $future = http()->GET($url)->on_done(
     sub {
+      $segment->{end_time} = time;
       my $response = shift;
       my $url      = $response->request->url;
       my $html     = $response->content;
       my $data     = $1 if $html =~ m{data-page="(.*?)">};
       return if !$data;
-      my $elapsed = int((time - $START{$url}) * 1000);
+      my $elapsed = elapsed($segment);
       warn "GET $url ($elapsed ms)\n";
       $data =~ s{&quot;}{"}g;
       $data =~ s{&#039;}{'}g;
@@ -284,4 +294,28 @@ sub http
   );
   $loop->add($http);
   return $http;
+}
+
+sub elapsed
+{
+  my $segment = shift;
+  return int(($segment->{end_time} - $segment->{start_time}) * 1000);
+}
+
+sub wrapped
+{
+  my $segment  = shift;
+  my $response = shift;
+  my $url      = $response->request->url->as_string;
+  $segment->{end_time} = time;
+  $segment->{http}     = {
+    request => {
+      method => 'GET',
+      url    => $url,
+    },
+    response => {
+      status => $response->code,
+    },
+  };
+  return $segment;
 }

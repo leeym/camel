@@ -52,7 +52,11 @@ foreach my $year (reverse sort @YEAR)
   my @TYPE = qw(llbws jlbws);
   for my $type (@TYPE)
   {
-    captured_year($type, $year);
+    my $url = build_url(
+      base_uri => 'https://www.littleleague.org',
+      path     => "/world-series/$year/$type/teams/asia-pacific-region/",
+    );
+    captured_year($type, $year, $url);
   }
 }
 
@@ -105,21 +109,20 @@ sub by_dtstart
 
 sub event
 {
-  my $year = shift;
-  my $type = shift;
-  my $url  = build_url(
-    base_uri => 'https://www.littleleague.org',
-    path     => "/world-series/$year/$type/teams/asia-pacific-region/",
-  );
-
+  my $type    = shift;
+  my $year    = shift;
+  my $url     = shift;
+  my $segment = shift;
   return if $START{$url};
   $START{$url} = time;
+  $segment->{start_time} = $START{$url};
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      my $url      = $response->request->url;
+      $segment = wrapped($segment, $response);
+      my $url = $response->request->url;
       return if !$START{$url};
-      my $elapsed = int((time - $START{$url}) * 1000);
+      my $elapsed = elapsed($segment);
       warn "GET $url ($elapsed ms)\n";
       my $html = $response->content;
       $html         =~ s{\r}{}g;
@@ -250,8 +253,10 @@ sub captured_year
 {
   my $type = shift;
   my $year = shift;
+  my $url  = shift;
   capture "$type-$year" => sub {
-    event($year, $type);
+    my $segment = shift;
+    event($type, $year, $url, $segment);
   }
 }
 
@@ -264,4 +269,28 @@ sub http
   );
   $loop->add($http);
   return $http;
+}
+
+sub elapsed
+{
+  my $segment = shift;
+  return int(($segment->{end_time} - $segment->{start_time}) * 1000);
+}
+
+sub wrapped
+{
+  my $segment  = shift;
+  my $response = shift;
+  my $url      = $response->request->url->as_string;
+  $segment->{end_time} = time;
+  $segment->{http}     = {
+    request => {
+      method => 'GET',
+      url    => $url,
+    },
+    response => {
+      status => $response->code,
+    },
+  };
+  return $segment;
 }

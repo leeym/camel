@@ -58,43 +58,58 @@ sub captured_pony
 {
   my $url = 'https://www.pony.org/';
   capture "pony" => sub {
-    pony($url);
+    my $segment = shift;
+    pony($url, $segment);
   }
 }
 
 sub pony
 {
-  my $url = shift;
+  my $url     = shift;
+  my $segment = shift;
   return if $START{$url};
   $START{$url} = time;
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      my $url      = $response->request->url;
-      my $elapsed  = int((time - $START{$url}) * 1000);
+      $segment = wrapped($segment, $response);
+      my $url     = $response->request->url;
+      my $elapsed = elapsed($segment);
       warn "GET $url ($elapsed ms)\n";
       my $html = $response->content;
-      my $next = my $url = build_url(
+      my $next = build_url(
         base_uri => 'https://www.pony.org',
         path     => $1,
       ) if $html =~ m{<a [^>]*href="([^"]+)">Baseball World Series</a>};
       return if !$next;
-      schedules($next);
+      captured_schedules("Baseball World Series", $next);
     }
   );
   push(@FUTURE, $future);
 }
 
+sub captured_schedules
+{
+  my $name = shift;
+  my $url  = shift;
+  capture $name => sub {
+    my $segment = shift;
+    schedules($url, $segment);
+  }
+}
+
 sub schedules
 {
-  my $url = shift;
+  my $url     = shift;
+  my $segment = shift;
   return if $START{$url};
   $START{$url} = time;
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      my $url      = $response->request->url;
-      my $elapsed  = int((time - $START{$url}) * 1000);
+      $segment = wrapped($segment, $response);
+      my $url     = $response->request->url;
+      my $elapsed = elapsed($segment);
       warn "GET $url ($elapsed ms)\n";
       my $html = $response->content;
       while ($html =~ m{<a href="([^"]+)"[^>]*>\s*([^>]+?)\s*</a>})
@@ -104,24 +119,36 @@ sub schedules
         $html = $';
         next if $text !~ m{World Series};
         next if $text !~ m{1(2|4|8)U};
-        event($href, $text);
+        captured_event($href, $text);
       }
     }
   );
   push(@FUTURE, $future);
 }
 
-sub event
+sub captured_event
 {
   my $url   = shift;
   my $title = shift;
+  capture $title => sub {
+    my $segment = shift;
+    event($url, $title, $segment);
+  }
+}
+
+sub event
+{
+  my $url     = shift;
+  my $title   = shift;
+  my $segment = shift;
   return if $START{$url};
   $START{$url} = time;
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      my $url      = $response->request->url;
-      my $elapsed  = int((time - $START{$url}) * 1000);
+      $segment = wrapped($segment, $response);
+      my $url     = $response->request->url;
+      my $elapsed = elapsed($segment);
       warn "GET $url ($elapsed ms)\n";
       my $html     = $response->content;
       my $base_uri = $1 if $url =~ m{^(https://.*?/)};
@@ -251,4 +278,28 @@ sub http
   );
   $loop->add($http);
   return $http;
+}
+
+sub elapsed
+{
+  my $segment = shift;
+  return int(($segment->{end_time} - $segment->{start_time}) * 1000);
+}
+
+sub wrapped
+{
+  my $segment  = shift;
+  my $response = shift;
+  my $url      = $response->request->url->as_string;
+  $segment->{end_time} = time;
+  $segment->{http}     = {
+    request => {
+      method => 'GET',
+      url    => $url,
+    },
+    response => {
+      status => $response->code,
+    },
+  };
+  return $segment;
 }

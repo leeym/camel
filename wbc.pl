@@ -96,14 +96,6 @@ sub by_dtstart
 sub captured_event
 {
   my $year = shift;
-  capture $year => sub {
-    event($year);
-  }
-}
-
-sub event
-{
-  my $year = shift;
   my $url  = build_url(
     base_uri => 'https://bdfed.stitch.mlbinfra.com',
     path     => '/bdfed/transform-mlb-schedule',
@@ -125,17 +117,29 @@ sub event
       leagueId     => 160,
     ],
   );
+  capture $year => sub {
+    my $segment = shift;
+    event($url, $segment);
+  }
+}
 
+sub event
+{
+  my $url     = shift;
+  my $segment = shift;
   return if $START{$url};
   $START{$url} = time;
+  $segment->{start_time} = $START{$url};
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      my $url      = $response->request->url;
-      my $elapsed  = int((time - $START{$url}) * 1000);
-      my $json     = $response->content;
-      my $data     = decode_json($json);
+      $segment = wrapped($segment, $response);
+      my $url     = $response->request->url;
+      my $elapsed = elapsed($segment);
+      my $json    = $response->content;
+      my $data    = decode_json($json);
       warn "GET $url ($elapsed ms)\n";
+
       foreach my $date (@{ $data->{dates} })
       {
         next if $date->{totalGames} == 0;
@@ -199,4 +203,28 @@ sub http
   );
   $loop->add($http);
   return $http;
+}
+
+sub elapsed
+{
+  my $segment = shift;
+  return int(($segment->{end_time} - $segment->{start_time}) * 1000);
+}
+
+sub wrapped
+{
+  my $segment  = shift;
+  my $response = shift;
+  my $url      = $response->request->url->as_string;
+  $segment->{end_time} = time;
+  $segment->{http}     = {
+    request => {
+      method => 'GET',
+      url    => $url,
+    },
+    response => {
+      status => $response->code,
+    },
+  };
+  return $segment;
 }
