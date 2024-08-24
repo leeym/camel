@@ -281,7 +281,8 @@ sub captured
   my $func   = shift;
   my @args   = @_;
   my $url    = $args[0];
-  my $code   = sub {
+  return if $SEGMENT{$url};
+  my $code = sub {
     my $segment = shift;
     $SEGMENT{$url} = $segment;
     $func->(@args);
