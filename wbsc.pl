@@ -202,19 +202,12 @@ sub events
         my $standings = $url;
         $standings =~ s,schedule-and-results,standings,;
         my $boxscore = boxscore($url, $g);
-        my %DESC;
-        $DESC{'Standings'} = $standings;
-        $DESC{'Box Score'} = $boxscore;
-        $DESC{'Schedule'}  = $url;
-        $DESC{'Watch'}     = $g->{gamevideo} if $g->{gamevideo};
-
-        my $desc = '<ul>';
-        for my $text (sort keys %DESC)
-        {
-          $desc .= sprintf('<li><a href="%s">%s</a></li>', $DESC{$text}, $text);
-        }
-        $desc .= '</ul>';
-
+        my %LI;
+        $LI{'Standings'} = $standings;
+        $LI{'Box Score'} = $boxscore;
+        $LI{'Schedule'}  = $url;
+        $LI{'Watch'}     = $g->{gamevideo} if $g->{gamevideo};
+        my $desc   = unordered(%LI);
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           description     => $desc,
@@ -291,6 +284,7 @@ sub captured
 
 sub last_modified_description
 {
+  my %LI;
   my $region = region();
   my $url;
   $url .= "https://$region.console.aws.amazon.com/cloudwatch/home?";
@@ -298,15 +292,25 @@ sub last_modified_description
   if ($ENV{_X_AMZN_TRACE_ID})
   {
     my $t = $1 if $ENV{_X_AMZN_TRACE_ID} =~ m{Root=([0-9a-fA-F-]+)};
-    $url .= "#xray:traces/$t";
+    $LI{Trace} = $url . "#xray:traces/$t";
   }
-  elsif ($ENV{AWS_LAMBDA_LOG_STREAM_NAME} && $ENV{AWS_LAMBDA_LOG_GROUP_NAME})
+  if ($ENV{AWS_LAMBDA_LOG_STREAM_NAME} && $ENV{AWS_LAMBDA_LOG_GROUP_NAME})
   {
-    my $group  = escaped($ENV{AWS_LAMBDA_LOG_GROUP_NAME});
-    my $stream = escaped($ENV{AWS_LAMBDA_LOG_STREAM_NAME});
-    $url .= "#logsV2:log-groups/log-group/$group/log-events/$stream";
+    $LI{Trace} =
+        $url
+      . '"#logsV2:log-groups/log-group/'
+      . escaped($ENV{AWS_LAMBDA_LOG_GROUP_NAME})
+      . '/log-events/'
+      . escaped($ENV{AWS_LAMBDA_LOG_STREAM_NAME});
   }
-  return $url;
+  if (!scalar(%LI))
+  {
+    for my $url (keys %SEGMENT)
+    {
+      $LI{$url} = $url;
+    }
+  }
+  return unordered(%LI);
 }
 
 sub escaped
@@ -324,4 +328,15 @@ sub escaped
 sub region
 {
   return $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
+}
+
+sub unordered
+{
+  my %LI = @_;
+  my $html;
+  for my $text (sort keys %LI)
+  {
+    $html .= '<li><a href="' . $LI{$text} . '">' . $text . '</a></li>';
+  }
+  return '<ul>' . $html . '</ul>';
 }

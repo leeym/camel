@@ -175,9 +175,10 @@ sub team
         my $end_ts   = str2time($g->{end_ts});
 
         warn $g->{start_ts} . " $summary\n";
-        my $description =
-          "<ul><li><a href=\"https://web.gc.com/teams/$id\">Team</a></li></ul>";
-        my $vevent = Data::ICal::Entry::Event->new();
+        my %LI;
+        $LI{Team} = "https://web.gc.com/teams/$id";
+        my $description = unordered(%LI);
+        my $vevent      = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           description     => $description,
           dtstart         => Date::ICal->new(epoch => $start_ts + 1)->ical,
@@ -262,6 +263,7 @@ sub captured
 
 sub last_modified_description
 {
+  my %LI;
   my $region = region();
   my $url;
   $url .= "https://$region.console.aws.amazon.com/cloudwatch/home?";
@@ -269,15 +271,25 @@ sub last_modified_description
   if ($ENV{_X_AMZN_TRACE_ID})
   {
     my $t = $1 if $ENV{_X_AMZN_TRACE_ID} =~ m{Root=([0-9a-fA-F-]+)};
-    $url .= "#xray:traces/$t";
+    $LI{Trace} = $url . "#xray:traces/$t";
   }
-  elsif ($ENV{AWS_LAMBDA_LOG_STREAM_NAME} && $ENV{AWS_LAMBDA_LOG_GROUP_NAME})
+  if ($ENV{AWS_LAMBDA_LOG_STREAM_NAME} && $ENV{AWS_LAMBDA_LOG_GROUP_NAME})
   {
-    my $group  = escaped($ENV{AWS_LAMBDA_LOG_GROUP_NAME});
-    my $stream = escaped($ENV{AWS_LAMBDA_LOG_STREAM_NAME});
-    $url .= "#logsV2:log-groups/log-group/$group/log-events/$stream";
+    $LI{Trace} =
+        $url
+      . '"#logsV2:log-groups/log-group/'
+      . escaped($ENV{AWS_LAMBDA_LOG_GROUP_NAME})
+      . '/log-events/'
+      . escaped($ENV{AWS_LAMBDA_LOG_STREAM_NAME});
   }
-  return $url;
+  if (!scalar(%LI))
+  {
+    for my $url (keys %SEGMENT)
+    {
+      $LI{$url} = $url;
+    }
+  }
+  return unordered(%LI);
 }
 
 sub escaped
@@ -295,4 +307,15 @@ sub escaped
 sub region
 {
   return $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
+}
+
+sub unordered
+{
+  my %LI = @_;
+  my $html;
+  for my $text (sort keys %LI)
+  {
+    $html .= '<li><a href="' . $LI{$text} . '">' . $text . '</a></li>';
+  }
+  return '<ul>' . $html . '</ul>';
 }

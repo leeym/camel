@@ -188,21 +188,14 @@ sub event
 
         warn "$year-$month-$day $hour:$min (America/New_York) $summary\n";
         my $links = $1 if $footer =~ m{(<ul.*?/ul>)};
-        my %DESC;
-        $DESC{Schedule} = $url;
+        my %LI;
+        $LI{Schedule} = $url;
         while ($links =~ m{<a [^>]*?href="([^"]+)"[^>]*>\s*([^<]+?)\s*<})
         {
-          my $href = $1;
-          my $text = $2;
-          $DESC{$2} = $1;
+          $LI{$2} = $1;
           $links = $';
         }
-        my $desc = '<ul>';
-        for my $text (sort keys %DESC)
-        {
-          $desc .= sprintf('<li><a href="%s">%s</a></li>', $DESC{$text}, $text);
-        }
-        $desc .= '</ul>';
+        my $desc    = unordered(%LI);
         my $dtstart = Date::ICal->new(
           year   => $year,
           month  => $month,
@@ -287,6 +280,7 @@ sub captured
 
 sub last_modified_description
 {
+  my %LI;
   my $region = region();
   my $url;
   $url .= "https://$region.console.aws.amazon.com/cloudwatch/home?";
@@ -294,15 +288,25 @@ sub last_modified_description
   if ($ENV{_X_AMZN_TRACE_ID})
   {
     my $t = $1 if $ENV{_X_AMZN_TRACE_ID} =~ m{Root=([0-9a-fA-F-]+)};
-    $url .= "#xray:traces/$t";
+    $LI{Trace} = $url . "#xray:traces/$t";
   }
-  elsif ($ENV{AWS_LAMBDA_LOG_STREAM_NAME} && $ENV{AWS_LAMBDA_LOG_GROUP_NAME})
+  if ($ENV{AWS_LAMBDA_LOG_STREAM_NAME} && $ENV{AWS_LAMBDA_LOG_GROUP_NAME})
   {
-    my $group  = escaped($ENV{AWS_LAMBDA_LOG_GROUP_NAME});
-    my $stream = escaped($ENV{AWS_LAMBDA_LOG_STREAM_NAME});
-    $url .= "#logsV2:log-groups/log-group/$group/log-events/$stream";
+    $LI{Trace} =
+        $url
+      . '"#logsV2:log-groups/log-group/'
+      . escaped($ENV{AWS_LAMBDA_LOG_GROUP_NAME})
+      . '/log-events/'
+      . escaped($ENV{AWS_LAMBDA_LOG_STREAM_NAME});
   }
-  return $url;
+  if (!scalar(%LI))
+  {
+    for my $url (keys %SEGMENT)
+    {
+      $LI{$url} = $url;
+    }
+  }
+  return unordered(%LI);
 }
 
 sub escaped
@@ -320,4 +324,15 @@ sub escaped
 sub region
 {
   return $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
+}
+
+sub unordered
+{
+  my %LI = @_;
+  my $html;
+  for my $text (sort keys %LI)
+  {
+    $html .= '<li><a href="' . $LI{$text} . '">' . $text . '</a></li>';
+  }
+  return '<ul>' . $html . '</ul>';
 }
