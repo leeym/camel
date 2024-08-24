@@ -1,5 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
+use AWS::XRay qw(capture);
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
@@ -18,6 +19,7 @@ my @YEAR = (2006 .. (localtime)[5] + 1901);
 my $ics  = new Data::ICal;
 my %START;
 my %VEVENT;
+my @FUTURE;
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
 
@@ -33,46 +35,59 @@ $METAL{1} = 'Gold';
 $METAL{3} = 'Bronze';
 
 $START{$url} = time();
-my $future = http()->GET($url)->on_done(
-  sub {
-    my $response = shift;
-    my $elapsed  = int(($START{$url} - $start) * 1000);
-    my $json     = $response->content;
-    my $data     = decode_json($json);
-    foreach my $u (@{ $data->{'units'} })
-    {
-      my $url       = 'https://olympics.com' . $u->{'extraData'}->{'detailUrl'};
-      my $medalFlag = $u->{'medalFlag'};
-      my $summary;
-      $summary = "[" . $METAL{$medalFlag} . "] " if $medalFlag;
-      $summary .= $u->{'disciplineName'} . " " . $u->{'eventUnitName'};
 
-      my $description = '<ul>';
-      $description .= '<li><a href="' . $url . '">Details</a></li>';
-      $description .= '<li>' . $u->{'locationDescription'} . '</li>';
-      $description .= '</ul>';
-
-      foreach my $c (@{ $u->{'competitors'} })
+capture $url => sub {
+  my $segment = shift;
+  my $future  = http()->GET($url)->on_done(
+    sub {
+      my $response = shift;
+      $segment = wrapped($segment, $response);
+      my $url     = $response->request->url;
+      my $elapsed = elapsed($segment);
+      warn "GET $url ($elapsed ms)\n";
+      my $json = $response->content;
+      my $data = decode_json($json);
+      foreach my $u (@{ $data->{'units'} })
       {
-        next if $c->{'noc'} ne 'TPE';
-        $description .= $c->{'name'} . " " . results($c->{'results'}) . "\n";
+        my $url = 'https://olympics.com' . $u->{'extraData'}->{'detailUrl'};
+        my $medalFlag = $u->{'medalFlag'};
+        my $summary;
+        $summary = "[" . $METAL{$medalFlag} . "] " if $medalFlag;
+        $summary .= $u->{'disciplineName'} . " " . $u->{'eventUnitName'};
+
+        my $description = '<ul>';
+        $description .= '<li><a href="' . $url . '">Details</a></li>';
+        $description .= '<li>' . $u->{'locationDescription'} . '</li>';
+        $description .= '</ul>';
+
+        foreach my $c (@{ $u->{'competitors'} })
+        {
+          next if $c->{'noc'} ne 'TPE';
+          $description .= $c->{'name'} . " " . results($c->{'results'}) . "\n";
+        }
+        my $vevent = Data::ICal::Entry::Event->new();
+        $vevent->add_properties(
+          uid             => $u->{id},
+          url             => $url,
+          location        => $u->{'venueDescription'},
+          dtstart         => ical($u->{'startDate'}),
+          dtend           => ical($u->{'endDate'}),
+          summary         => $summary,
+          description     => $description,
+          'last-modified' => $now,
+        );
+        $VEVENT{ $u->{id} } = $vevent;
       }
-      my $vevent = Data::ICal::Entry::Event->new();
-      $vevent->add_properties(
-        uid             => $u->{id},
-        url             => $url,
-        location        => $u->{'venueDescription'},
-        dtstart         => ical($u->{'startDate'}),
-        dtend           => ical($u->{'endDate'}),
-        summary         => $summary,
-        description     => $description,
-        'last-modified' => $now,
-      );
-      $VEVENT{ $u->{id} } = $vevent;
     }
-  }
-);
-await $future->get();
+  );
+  push(@FUTURE, $future);
+};
+
+foreach my $future (@FUTURE)
+{
+  my $future = shift @FUTURE;
+  await $future->get();
+}
 
 foreach my $vevent (sort by_dtstart values %VEVENT)
 {
@@ -145,4 +160,29 @@ sub http
   );
   $loop->add($http);
   return $http;
+}
+
+sub elapsed
+{
+  my $segment = shift;
+  return int(($segment->{end_time} - $segment->{start_time}) * 1000);
+}
+
+sub wrapped
+{
+  my $segment  = shift;
+  my $response = shift;
+  my $url      = $response->request->url->as_string;
+  $segment->{end_time} = time;
+  $segment->{http}     = {
+    request => {
+      method => $response->request->method,
+      url    => $url,
+    },
+    response => {
+      status         => $response->code,
+      content_length => length($response->content),
+    },
+  };
+  return $segment;
 }

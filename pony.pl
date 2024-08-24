@@ -1,6 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
-use AWS::XRay qw(capture);
+use AWS::XRay qw(capture capture_from);
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
@@ -57,7 +57,7 @@ END
 sub captured_pony
 {
   my $url = 'https://www.pony.org/';
-  capture "pony" => sub {
+  capture $url => sub {
     my $segment = shift;
     pony($url, $segment);
   }
@@ -82,7 +82,7 @@ sub pony
         path     => $1,
       ) if $html =~ m{<a [^>]*href="([^"]+)">Baseball World Series</a>};
       return if !$next;
-      captured_schedules("Baseball World Series", $next);
+      captured_schedules($next, $segment);
     }
   );
   push(@FUTURE, $future);
@@ -90,11 +90,11 @@ sub pony
 
 sub captured_schedules
 {
-  my $name = shift;
-  my $url  = shift;
-  capture $name => sub {
-    my $segment = shift;
-    schedules($url, $segment);
+  my $url    = shift;
+  my $parent = shift;
+  capture_from $parent->trace_header, name($url) => sub {
+    my $child = shift;
+    schedules($url, $child);
   }
 }
 
@@ -119,7 +119,7 @@ sub schedules
         $html = $';
         next if $text !~ m{World Series};
         next if $text !~ m{1(2|4|8)U};
-        captured_event($href, $text);
+        captured_event($href, $text, $segment);
       }
     }
   );
@@ -128,11 +128,12 @@ sub schedules
 
 sub captured_event
 {
-  my $url   = shift;
-  my $title = shift;
-  capture $title => sub {
-    my $segment = shift;
-    event($url, $title, $segment);
+  my $url    = shift;
+  my $title  = shift;
+  my $parent = shift;
+  capture_from $parent->trace_header, name($url) => sub {
+    my $child = shift;
+    event($url, $title, $child);
   }
 }
 
@@ -157,23 +158,36 @@ sub event
         path     => $1,
       ) if $html =~ m{<a [^>]*href="([^"]+)">GameChanger[^<]*</a>};
       return if !$next;
-      teams($next, $title);
+      captured_teams($next, $title, $segment);
     }
   );
   push(@FUTURE, $future);
 }
 
+sub captured_teams
+{
+  my $url    = shift;
+  my $title  = shift;
+  my $parent = shift;
+  capture_from $parent->trace_header, name($url) => sub {
+    my $child = shift;
+    teams($url, $title, $child);
+  }
+}
+
 sub teams
 {
-  my $url   = shift;
-  my $title = shift;
+  my $url     = shift;
+  my $title   = shift;
+  my $segment = shift;
   return if $START{$url};
   $START{$url} = time;
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      my $url      = $response->request->url;
-      my $elapsed  = int((time - $START{$url}) * 1000);
+      $segment = wrapped($segment, $response);
+      my $url     = $response->request->url;
+      my $elapsed = int((time - $START{$url}) * 1000);
       warn "GET $url ($elapsed ms)\n";
       my $html = $response->content;
       my ($next, $name) = ($1, $2)
@@ -181,25 +195,40 @@ sub teams
       my $tid = $1 if $next =~ m{/teams/([^/]+)/};
       $name =~ s{Chinese Taipei}{Taiwan};
       return if !$tid;
-      team($tid, $name, $title);
+      captured_team($tid, $name, $title, $segment);
     }
   );
   push(@FUTURE, $future);
 }
 
+sub captured_team
+{
+  my $id     = shift;
+  my $name   = shift;
+  my $title  = shift;
+  my $parent = shift;
+  my $url    = "https://api.team-manager.gc.com/public/teams/$id/games";
+  capture_from $parent->trace_header, name($url) => sub {
+    my $child = shift;
+    team($id, $name, $title, $url, $child);
+  }
+}
+
 sub team
 {
-  my $id    = shift;
-  my $name  = shift;
-  my $title = shift;
-  my $url   = "https://api.team-manager.gc.com/public/teams/$id/games";
+  my $id      = shift;
+  my $name    = shift;
+  my $title   = shift;
+  my $url     = shift;
+  my $segment = shift;
   return if $START{$url};
   $START{$url} = time;
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      my $url      = $response->request->url;
-      my $elapsed  = int((time - $START{$url}) * 1000);
+      $segment = wrapped($segment, $response);
+      my $url     = $response->request->url;
+      my $elapsed = elapsed($segment);
       warn "GET $url ($elapsed ms)\n";
       my $json = $response->content;
       my $data = decode_json($json);
@@ -294,12 +323,21 @@ sub wrapped
   $segment->{end_time} = time;
   $segment->{http}     = {
     request => {
-      method => 'GET',
+      method => $response->request->method,
       url    => $url,
     },
     response => {
-      status => $response->code,
+      status         => $response->code,
+      content_length => length($response->content),
     },
   };
   return $segment;
+}
+
+sub name
+{
+  my $name = shift;
+  $name =~ s{\?}{#}g;
+  $name = substr $name, 0, 200;
+  return $name;
 }

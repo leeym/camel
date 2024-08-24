@@ -52,11 +52,7 @@ foreach my $year (reverse sort @YEAR)
   my @TYPE = qw(llbws jlbws);
   for my $type (@TYPE)
   {
-    my $url = build_url(
-      base_uri => 'https://www.littleleague.org',
-      path     => "/world-series/$year/$type/teams/asia-pacific-region/",
-    );
-    captured_year($type, $year, $url);
+    captured_year($type, $year);
   }
 }
 
@@ -253,8 +249,11 @@ sub captured_year
 {
   my $type = shift;
   my $year = shift;
-  my $url  = shift;
-  capture "$type-$year" => sub {
+  my $url  = build_url(
+    base_uri => 'https://www.littleleague.org',
+    path     => "/world-series/$year/$type/teams/asia-pacific-region/",
+  );
+  capture $url => sub {
     my $segment = shift;
     event($type, $year, $url, $segment);
   }
@@ -285,11 +284,12 @@ sub wrapped
   $segment->{end_time} = time;
   $segment->{http}     = {
     request => {
-      method => 'GET',
+      method => $response->request->method,
       url    => $url,
     },
     response => {
-      status => $response->code,
+      status         => $response->code,
+      content_length => length($response->content),
     },
   };
   return $segment;

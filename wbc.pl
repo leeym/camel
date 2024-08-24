@@ -100,24 +100,25 @@ sub captured_event
     base_uri => 'https://bdfed.stitch.mlbinfra.com',
     path     => '/bdfed/transform-mlb-schedule',
     query    => [
-      stitch_env   => 'prod',
-      sortTemplate => 5,
-      sportId      => 51,
-      startDate    => "$year-01-01",
-      endDate      => "$year-12-31",
-      gameType     => 'A',
-      gameType     => 'D',
-      gameType     => 'F',
-      gameType     => 'L',
-      gameType     => 'R',
-      gameType     => 'S',
-      gameType     => 'W',
-      language     => 'en',
-      leagueId     => 159,
-      leagueId     => 160,
+      sportId   => 51,
+      startDate => "$year-01-01",
+      endDate   => "$year-12-31",
+
+      #stitch_env => 'prod',
+      #sortTemplate => 5,
+      #gameType     => 'A',
+      #gameType     => 'D',
+      #gameType     => 'F',
+      #gameType     => 'L',
+      #gameType     => 'R',
+      #gameType     => 'S',
+      #gameType     => 'W',
+      #language => 'en',
+      #leagueId => 159,
+      #leagueId => 160,
     ],
   );
-  capture $year => sub {
+  capture name($url) => sub {
     my $segment = shift;
     event($url, $segment);
   }
@@ -129,7 +130,6 @@ sub event
   my $segment = shift;
   return if $START{$url};
   $START{$url} = time;
-  $segment->{start_time} = $START{$url};
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
@@ -219,12 +219,20 @@ sub wrapped
   $segment->{end_time} = time;
   $segment->{http}     = {
     request => {
-      method => 'GET',
+      method => $response->request->method,
       url    => $url,
     },
     response => {
-      status => $response->code,
+      status         => $response->code,
+      content_length => length($response->content),
     },
   };
   return $segment;
+}
+
+sub name
+{
+  my $name = shift;
+  $name =~ s{\?}{#}g;
+  return $name;
 }

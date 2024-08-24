@@ -1,6 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
-use AWS::XRay qw(capture);
+use AWS::XRay qw(capture capture_from);
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
@@ -100,7 +100,7 @@ sub captured_year
   my $domain = shift;
   my $yyyy   = shift;
   my $url    = "https://www.$domain.org/en/calendar/$yyyy/baseball";
-  capture "$domain-$yyyy" => sub {
+  capture $url => sub {
     my $segment = shift;
     year($url, $segment);
   }
@@ -112,7 +112,6 @@ sub year
   my $segment = shift;
   return if $START{$url};
   $START{$url} = time;
-  $segment->{start_time} = $START{$url};
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
@@ -126,25 +125,20 @@ sub year
         next if $url !~ m{/events/\d{4}-.*/\w+$};
         $url =~ s{/\w+$}{/schedule-and-results};
         next if $START{$url};
-        events($url);
+        captured_events($url, $segment);
       }
     }
   );
   push(@FUTURE, $future);
 }
 
-sub captured_event
+sub captured_events
 {
-  my $url = shift;
-  capture "schedule" => sub {
-    my $segment = shift;
-    $segment->{http} = {
-      request => {
-        method => 'GET',
-        url    => $url,
-      },
-    };
-    events($url, $segment);
+  my $url    = shift;
+  my $parent = shift;
+  capture_from $parent->trace_header, $url => sub {
+    my $child = shift;
+    events($url, $child);
   }
 }
 
@@ -154,14 +148,13 @@ sub events
   my $segment = shift;
   return if $START{$url};
   $START{$url} = time;
-  $segment->{start_time} = $START{$url};
   my $future = http()->GET($url)->on_done(
     sub {
-      $segment->{end_time} = time;
       my $response = shift;
-      my $url      = $response->request->url;
-      my $html     = $response->content;
-      my $data     = $1 if $html =~ m{data-page="(.*?)">};
+      $segment = wrapped($segment, $response);
+      my $url  = $response->request->url;
+      my $html = $response->content;
+      my $data = $1 if $html =~ m{data-page="(.*?)">};
       return if !$data;
       my $elapsed = elapsed($segment);
       warn "GET $url ($elapsed ms)\n";
@@ -310,11 +303,12 @@ sub wrapped
   $segment->{end_time} = time;
   $segment->{http}     = {
     request => {
-      method => 'GET',
+      method => $response->request->method,
       url    => $url,
     },
     response => {
-      status => $response->code,
+      status         => $response->code,
+      content_length => length($response->content),
     },
   };
   return $segment;
