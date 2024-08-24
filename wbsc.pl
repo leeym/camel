@@ -17,7 +17,7 @@ use strict;
 my $ics = new Data::ICal;
 my %URL;
 my %VEVENT;
-my %START;
+my %SEGMENT;
 my @FUTURE;
 my $start = time;
 my $now   = Date::ICal->new(epoch => $start)->ical;
@@ -95,69 +95,36 @@ sub duration
   return '3:00';
 }
 
-sub captured_year
-{
-  my $domain = shift;
-  my $yyyy   = shift;
-  my $url    = "https://www.$domain.org/en/calendar/$yyyy/baseball";
-  capture $url => sub {
-    my $segment = shift;
-    year($url, $segment);
-  }
-}
-
 sub year
 {
-  my $url     = shift;
-  my $segment = shift;
-  return if $START{$url};
-  $START{$url} = time;
+  my $url    = shift;
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      $segment = wrapped($segment, $response);
-      my $url     = $response->request->url;
-      my $html    = $response->content;
-      my $elapsed = elapsed($segment);
-      warn "GET $url ($elapsed ms)\n";
-      foreach my $url ($html =~ m{window.open\('([^']+)'}g)
+      segment($response);
+      my $html = $response->content;
+      foreach my $next ($html =~ m{window.open\('([^']+)'}g)
       {
-        next if $url !~ m{/events/\d{4}-.*/\w+$};
-        $url =~ s{/\w+$}{/schedule-and-results};
-        next if $START{$url};
-        captured_events($url, $segment);
+        next if $next !~ m{/events/\d{4}-.*/\w+$};
+        $next =~ s{/\w+$}{/schedule-and-results};
+        captured($SEGMENT{$url}, \&events, $next);
       }
     }
   );
   push(@FUTURE, $future);
 }
 
-sub captured_events
-{
-  my $url    = shift;
-  my $parent = shift;
-  capture_from $parent->trace_header, $url => sub {
-    my $child = shift;
-    events($url, $child);
-  }
-}
-
 sub events
 {
-  my $url     = shift;
-  my $segment = shift;
-  return if $START{$url};
-  $START{$url} = time;
+  my $url    = shift;
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      $segment = wrapped($segment, $response);
+      segment($response);
       my $url  = $response->request->url;
       my $html = $response->content;
       my $data = $1 if $html =~ m{data-page="(.*?)">};
       return if !$data;
-      my $elapsed = elapsed($segment);
-      warn "GET $url ($elapsed ms)\n";
       $data =~ s{&quot;}{"}g;
       $data =~ s{&#039;}{'}g;
       my $d = decode_json($data);
@@ -235,7 +202,8 @@ foreach my $yyyy (sort by_year @YEAR)
 {
   foreach my $domain ('wbsc', 'wbscasia')
   {
-    captured_year($domain, $yyyy);
+    my $url = "https://www.$domain.org/en/calendar/$yyyy/baseball";
+    captured(undef, \&year, $url);
   }
 }
 
@@ -271,7 +239,7 @@ END
 sub last_modified_description
 {
   my $html;
-  foreach my $url (keys %START)
+  foreach my $url (keys %SEGMENT)
   {
     $html .= "<li>$url</li>";
   }
@@ -289,17 +257,12 @@ sub http
   return $http;
 }
 
-sub elapsed
+sub segment
 {
-  my $segment = shift;
-  return int(($segment->{end_time} - $segment->{start_time}) * 1000);
-}
-
-sub wrapped
-{
-  my $segment  = shift;
   my $response = shift;
   my $url      = $response->request->url->as_string;
+  my $segment  = $SEGMENT{$url};
+  return if !$segment;
   $segment->{end_time} = time;
   $segment->{http}     = {
     request => {
@@ -311,5 +274,29 @@ sub wrapped
       content_length => length($response->content),
     },
   };
-  return $segment;
+  my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
+  warn "GET $url ($elapsed ms)\n";
+}
+
+sub captured
+{
+  my $parent = shift;
+  my $func   = shift;
+  my @args   = @_;
+  my $url    = $args[0];
+  my $code   = sub {
+    my $segment = shift;
+    $SEGMENT{$url} = $segment;
+    $func->(@args);
+  };
+  my $name = $url;
+  $name =~ s{\?}{#}g;
+  if ($parent)
+  {
+    capture_from $parent->trace_header, $name => $code;
+  }
+  else
+  {
+    capture $name => $code;
+  }
 }

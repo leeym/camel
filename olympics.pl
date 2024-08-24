@@ -17,7 +17,7 @@ use strict;
 
 my @YEAR = (2006 .. (localtime)[5] + 1901);
 my $ics  = new Data::ICal;
-my %START;
+my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
 my $start = time();
@@ -34,17 +34,15 @@ my %METAL;
 $METAL{1} = 'Gold';
 $METAL{3} = 'Bronze';
 
-$START{$url} = time();
+captured(undef, \&olympics, $url);
 
-capture $url => sub {
-  my $segment = shift;
-  my $future  = http()->GET($url)->on_done(
+sub olympics
+{
+  my $url    = shift;
+  my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      $segment = wrapped($segment, $response);
-      my $url     = $response->request->url;
-      my $elapsed = elapsed($segment);
-      warn "GET $url ($elapsed ms)\n";
+      segment($response);
       my $json = $response->content;
       my $data = decode_json($json);
       foreach my $u (@{ $data->{'units'} })
@@ -81,7 +79,7 @@ capture $url => sub {
     }
   );
   push(@FUTURE, $future);
-};
+}
 
 foreach my $future (@FUTURE)
 {
@@ -144,7 +142,7 @@ sub by_dtstart
 sub last_modified_description
 {
   my $html;
-  foreach my $url (keys %START)
+  foreach my $url (keys %SEGMENT)
   {
     $html .= "<li>$url</li>";
   }
@@ -162,17 +160,12 @@ sub http
   return $http;
 }
 
-sub elapsed
+sub segment
 {
-  my $segment = shift;
-  return int(($segment->{end_time} - $segment->{start_time}) * 1000);
-}
-
-sub wrapped
-{
-  my $segment  = shift;
   my $response = shift;
   my $url      = $response->request->url->as_string;
+  my $segment  = $SEGMENT{$url};
+  return if !$segment;
   $segment->{end_time} = time;
   $segment->{http}     = {
     request => {
@@ -184,5 +177,29 @@ sub wrapped
       content_length => length($response->content),
     },
   };
-  return $segment;
+  my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
+  warn "GET $url ($elapsed ms)\n";
+}
+
+sub captured
+{
+  my $parent = shift;
+  my $func   = shift;
+  my @args   = @_;
+  my $url    = $args[0];
+  my $code   = sub {
+    my $segment = shift;
+    $SEGMENT{$url} = $segment;
+    $func->(@args);
+  };
+  my $name = $url;
+  $name =~ s{\?}{#}g;
+  if ($parent)
+  {
+    capture_from $parent->trace_header, $name => $code;
+  }
+  else
+  {
+    capture $name => $code;
+  }
 }

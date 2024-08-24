@@ -1,6 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
-use AWS::XRay qw(capture);
+use AWS::XRay qw(capture capture_from);
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
@@ -26,13 +26,35 @@ my %VEVENT;
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
 my @FUTURE;
-my %START;
+my %SEGMENT;
 
 my $loop = IO::Async::Loop->new();
 
 foreach my $year (reverse sort @YEAR)
 {
-  captured_event($year);
+  my $url = build_url(
+    base_uri => 'https://bdfed.stitch.mlbinfra.com',
+    path     => '/bdfed/transform-mlb-schedule',
+    query    => [
+      sportId   => 51,
+      startDate => "$year-01-01",
+      endDate   => "$year-12-31",
+
+      #stitch_env => 'prod',
+      #sortTemplate => 5,
+      #gameType     => 'A',
+      #gameType     => 'D',
+      #gameType     => 'F',
+      #gameType     => 'L',
+      #gameType     => 'R',
+      #gameType     => 'S',
+      #gameType     => 'W',
+      #language => 'en',
+      #leagueId => 159,
+      #leagueId => 160,
+    ],
+  );
+  captured(undef, \&event, $url);
 }
 
 while (scalar(@FUTURE))
@@ -67,7 +89,7 @@ END
 sub last_modified_description
 {
   my $html;
-  foreach my $url (keys %START)
+  foreach my $url (keys %SEGMENT)
   {
     $html .= "<li>$url</li>";
   }
@@ -93,52 +115,15 @@ sub by_dtstart
   return dtstart($a) cmp dtstart($b);
 }
 
-sub captured_event
-{
-  my $year = shift;
-  my $url  = build_url(
-    base_uri => 'https://bdfed.stitch.mlbinfra.com',
-    path     => '/bdfed/transform-mlb-schedule',
-    query    => [
-      sportId   => 51,
-      startDate => "$year-01-01",
-      endDate   => "$year-12-31",
-
-      #stitch_env => 'prod',
-      #sortTemplate => 5,
-      #gameType     => 'A',
-      #gameType     => 'D',
-      #gameType     => 'F',
-      #gameType     => 'L',
-      #gameType     => 'R',
-      #gameType     => 'S',
-      #gameType     => 'W',
-      #language => 'en',
-      #leagueId => 159,
-      #leagueId => 160,
-    ],
-  );
-  capture name($url) => sub {
-    my $segment = shift;
-    event($url, $segment);
-  }
-}
-
 sub event
 {
-  my $url     = shift;
-  my $segment = shift;
-  return if $START{$url};
-  $START{$url} = time;
+  my $url    = shift;
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      $segment = wrapped($segment, $response);
-      my $url     = $response->request->url;
-      my $elapsed = elapsed($segment);
-      my $json    = $response->content;
-      my $data    = decode_json($json);
-      warn "GET $url ($elapsed ms)\n";
+      segment($response);
+      my $json = $response->content;
+      my $data = decode_json($json);
 
       foreach my $date (@{ $data->{dates} })
       {
@@ -205,17 +190,12 @@ sub http
   return $http;
 }
 
-sub elapsed
+sub segment
 {
-  my $segment = shift;
-  return int(($segment->{end_time} - $segment->{start_time}) * 1000);
-}
-
-sub wrapped
-{
-  my $segment  = shift;
   my $response = shift;
   my $url      = $response->request->url->as_string;
+  my $segment  = $SEGMENT{$url};
+  return if !$segment;
   $segment->{end_time} = time;
   $segment->{http}     = {
     request => {
@@ -227,12 +207,29 @@ sub wrapped
       content_length => length($response->content),
     },
   };
-  return $segment;
+  my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
+  warn "GET $url ($elapsed ms)\n";
 }
 
-sub name
+sub captured
 {
-  my $name = shift;
+  my $parent = shift;
+  my $func   = shift;
+  my @args   = @_;
+  my $url    = $args[0];
+  my $code   = sub {
+    my $segment = shift;
+    $SEGMENT{$url} = $segment;
+    $func->(@args);
+  };
+  my $name = $url;
   $name =~ s{\?}{#}g;
-  return $name;
+  if ($parent)
+  {
+    capture_from $parent->trace_header, $name => $code;
+  }
+  else
+  {
+    capture $name => $code;
+  }
 }

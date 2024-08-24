@@ -1,6 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
-use AWS::XRay qw(capture);
+use AWS::XRay qw(capture capture_from);
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
@@ -23,7 +23,7 @@ my @FUTURE;
 my %VEVENT;
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
-my %START;
+my %SEGMENT;
 
 my %MON;
 $MON{January}   = '01';
@@ -52,7 +52,11 @@ foreach my $year (reverse sort @YEAR)
   my @TYPE = qw(llbws jlbws);
   for my $type (@TYPE)
   {
-    captured_year($type, $year);
+    my $url = build_url(
+      base_uri => 'https://www.littleleague.org',
+      path     => "/world-series/$year/$type/teams/asia-pacific-region/",
+    );
+    captured(undef, \&event, $url, $type, $year);
   }
 }
 
@@ -105,21 +109,14 @@ sub by_dtstart
 
 sub event
 {
-  my $type    = shift;
-  my $year    = shift;
-  my $url     = shift;
-  my $segment = shift;
-  return if $START{$url};
-  $START{$url} = time;
-  $segment->{start_time} = $START{$url};
+  my $url    = shift;
+  my $type   = shift;
+  my $year   = shift;
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
-      $segment = wrapped($segment, $response);
-      my $url = $response->request->url;
-      return if !$START{$url};
-      my $elapsed = elapsed($segment);
-      warn "GET $url ($elapsed ms)\n";
+      segment($response);
+      my $url  = $response->request->url;
       my $html = $response->content;
       $html         =~ s{\r}{}g;
       $html         =~ s{\n}{}g;
@@ -238,25 +235,11 @@ sub event
 sub last_modified_description
 {
   my $html;
-  foreach my $url (keys %START)
+  foreach my $url (keys %SEGMENT)
   {
     $html .= "<li>$url</li>";
   }
   return "<ul>$html</ul>";
-}
-
-sub captured_year
-{
-  my $type = shift;
-  my $year = shift;
-  my $url  = build_url(
-    base_uri => 'https://www.littleleague.org',
-    path     => "/world-series/$year/$type/teams/asia-pacific-region/",
-  );
-  capture $url => sub {
-    my $segment = shift;
-    event($type, $year, $url, $segment);
-  }
 }
 
 sub http
@@ -270,17 +253,12 @@ sub http
   return $http;
 }
 
-sub elapsed
+sub segment
 {
-  my $segment = shift;
-  return int(($segment->{end_time} - $segment->{start_time}) * 1000);
-}
-
-sub wrapped
-{
-  my $segment  = shift;
   my $response = shift;
   my $url      = $response->request->url->as_string;
+  my $segment  = $SEGMENT{$url};
+  return if !$segment;
   $segment->{end_time} = time;
   $segment->{http}     = {
     request => {
@@ -292,5 +270,29 @@ sub wrapped
       content_length => length($response->content),
     },
   };
-  return $segment;
+  my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
+  warn "GET $url ($elapsed ms)\n";
+}
+
+sub captured
+{
+  my $parent = shift;
+  my $func   = shift;
+  my @args   = @_;
+  my $url    = $args[0];
+  my $code   = sub {
+    my $segment = shift;
+    $SEGMENT{$url} = $segment;
+    $func->(@args);
+  };
+  my $name = $url;
+  $name =~ s{\?}{#}g;
+  if ($parent)
+  {
+    capture_from $parent->trace_header, $name => $code;
+  }
+  else
+  {
+    capture $name => $code;
+  }
 }
