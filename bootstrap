@@ -20,7 +20,7 @@ my $base = "http://$ENV{AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation";
 while (1)
 {
   my $next = request("$base/next");
-  warn Dumper($next);
+  warn 'NEXT: ' . Dumper($next);
   my $req_id = $next->{headers}->{'lambda-runtime-aws-request-id'};
   die 'cannot take the Lambda request ID' if !$req_id;
   my $content = handle(decode_json($next->{content}));
@@ -39,7 +39,7 @@ sub request
 sub parse
 {
   my $payload = shift;
-  warn Dumper($payload);
+  warn 'PAYLOAD: ' . Dumper($payload);
   my %P;
   if ($payload->{httpMethod} eq 'GET')
   {
