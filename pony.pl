@@ -268,7 +268,7 @@ sub last_modified_description
   $url .= "region=$region";
   if ($ENV{_X_AMZN_TRACE_ID})
   {
-    my ($t, $s) = AWS::XRay->parse_trace_header($ENV{_X_AMZN_TRACE_ID});
+    my $t = $1 if $ENV{_X_AMZN_TRACE_ID} =~ m{Root=([0-9a-fA-F-]+)};
     $url .= "#xray:traces/$t";
   }
   elsif ($ENV{AWS_LAMBDA_LOG_STREAM_NAME} && $ENV{AWS_LAMBDA_LOG_GROUP_NAME})
