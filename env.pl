@@ -5,7 +5,10 @@ use Data::Printer use_prototypes => 0;
 use Switch;
 
 my $mode = shift;
-foreach my $key (qw(AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN))
+
+# https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html#configuration-envvars-runtime
+foreach my $key (
+  qw(AWS_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN))
 {
   delete($ENV{$key});
 }

@@ -12,6 +12,9 @@ use Data::Dumper;
 use HTTP::Tiny;
 use JSON::XS qw/decode_json encode_json/;
 
+$Data::Dumper::Terse  = 1;    # don't output names where feasible
+$Data::Dumper::Indent = 0;    # turn off all pretty print
+
 die "$0 only works in AWS Lambda\n" if !$ENV{AWS_LAMBDA_RUNTIME_API};
 
 my $http = HTTP::Tiny->new;
@@ -22,6 +25,10 @@ while (1)
   my $next = request("$base/next");
   warn 'NEXT: ' . Dumper($next);
   my $req_id = $next->{headers}->{'lambda-runtime-aws-request-id'};
+
+# https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html#configuration-envvars-runtime
+  $ENV{_X_AMZN_TRACE_ID} = $next->{headers}->{'lambda-runtime-trace-id'};
+
   die 'cannot take the Lambda request ID' if !$req_id;
   my $content = handle(decode_json($next->{content}));
   request("$base/$req_id/response", { content => encode_json($content) });
