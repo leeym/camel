@@ -96,7 +96,7 @@ $vevent->add_properties(
   dtend           => Date::ICal->new(epoch => time)->ical,
   summary         => 'Last Modified',
   uid             => 'Last Modified',
-  description     => trace(),
+  description     => last_modified_description(),
   'last-modified' => $now,
 );
 $ics->add_entry($vevent);
@@ -136,22 +136,6 @@ sub dtstart
 sub by_dtstart
 {
   return dtstart($a) cmp dtstart($b);
-}
-
-sub trace
-{
-  my $region = $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
-  my $trace  = "https://$region.console.aws.amazon.com/cloudwatch/home?";
-  $trace .= "region=$region#xray:traces/";
-  if ($ENV{_X_AMZN_TRACE_ID})
-  {
-    $trace .= AWS::XRay->parse_trace_header($ENV{_X_AMZN_TRACE_ID});
-  }
-  else
-  {
-    $trace .= AWS::XRay->new_trace_id();
-  }
-  return $trace;
 }
 
 sub http
@@ -208,4 +192,41 @@ sub captured
   {
     capture $name => $code;
   }
+}
+
+sub last_modified_description
+{
+  my $region = region();
+  my $url;
+  $url .= "https://$region.console.aws.amazon.com/cloudwatch/home?";
+  $url .= "region=$region";
+  if ($ENV{_X_AMZN_TRACE_ID})
+  {
+    my ($t, $s) = AWS::XRay->parse_trace_header($ENV{_X_AMZN_TRACE_ID});
+    $url .= "#xray:traces/$t";
+  }
+  elsif ($ENV{AWS_LAMBDA_LOG_STREAM_NAME} && $ENV{AWS_LAMBDA_LOG_GROUP_NAME})
+  {
+    my $group  = escaped($ENV{AWS_LAMBDA_LOG_GROUP_NAME});
+    my $stream = escaped($ENV{AWS_LAMBDA_LOG_STREAM_NAME});
+    $url .= "#logsV2:log-groups/log-group/$group/log-events/$stream";
+  }
+  return $url;
+}
+
+sub escaped
+{
+  my $src = shift;
+  my $dst = $src;
+  $dst =~ s{\[}{%5B}g;
+  $dst =~ s{\]}{%5D}g;
+  $dst =~ s{/}{%2F}g;
+  $dst =~ s{\$}{%24}g;
+  $dst =~ s{%}{\$25}g;
+  return $dst;
+}
+
+sub region
+{
+  return $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
 }
