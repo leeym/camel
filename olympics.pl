@@ -1,6 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
-use AWS::XRay qw(capture);
+use AWS::XRay qw(capture capture_from);
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
