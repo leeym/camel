@@ -163,10 +163,9 @@ sub segment
 {
   my $response = shift;
   my $url      = $response->request->url->as_string;
-  my $segment  = $SEGMENT{$url};
-  return if !$segment;
-  $segment->{end_time} = time;
-  $segment->{http}     = {
+  return if !$SEGMENT{$url};
+  $SEGMENT{$url}->{end_time} = time;
+  $SEGMENT{$url}->{http}     = {
     request => {
       method => $response->request->method,
       url    => $url,
@@ -176,7 +175,8 @@ sub segment
       content_length => length($response->content),
     },
   };
-  my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
+  my $elapsed =
+    int(($SEGMENT{$url}->{end_time} - $SEGMENT{$url}->{start_time}) * 1000);
   warn "GET $url ($elapsed ms)\n";
 }
 
