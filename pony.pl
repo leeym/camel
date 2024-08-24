@@ -55,8 +55,9 @@ END
 
 sub pony
 {
-  my $url    = shift;
-  my $future = http()->GET($url)->on_done(
+  my $url     = shift;
+  my $segment = $SEGMENT{$url};
+  my $future  = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       segment($response);
@@ -66,7 +67,7 @@ sub pony
         path     => $1,
       ) if $html =~ m{<a [^>]*href="([^"]+)">Baseball World Series</a>};
       return if !$next;
-      captured($SEGMENT{$url}->trace_header, \&schedules, $next);
+      captured($segment->trace_header, \&schedules, $next);
     }
   );
   push(@FUTURE, $future);
@@ -74,8 +75,9 @@ sub pony
 
 sub schedules
 {
-  my $url    = shift;
-  my $future = http()->GET($url)->on_done(
+  my $url     = shift;
+  my $segment = $SEGMENT{$url};
+  my $future  = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       segment($response);
@@ -87,7 +89,7 @@ sub schedules
         $html = $';
         next if $text !~ m{World Series};
         next if $text !~ m{1(2|4|8)U};
-        captured($SEGMENT{$url}->trace_header, \&event, $href, $text);
+        captured($segment->trace_header, \&event, $href, $text);
       }
     }
   );
@@ -96,9 +98,10 @@ sub schedules
 
 sub event
 {
-  my $url    = shift;
-  my $title  = shift;
-  my $future = http()->GET($url)->on_done(
+  my $url     = shift;
+  my $title   = shift;
+  my $segment = $SEGMENT{$url};
+  my $future  = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       segment($response);
@@ -109,7 +112,7 @@ sub event
         path     => $1,
       ) if $html =~ m{<a [^>]*href="([^"]+)">GameChanger[^<]*</a>};
       return if !$next;
-      captured($SEGMENT{$url}->trace_header, \&teams, $next, $title);
+      captured($segment->trace_header, \&teams, $next, $title);
     }
   );
   push(@FUTURE, $future);
@@ -117,9 +120,10 @@ sub event
 
 sub teams
 {
-  my $url    = shift;
-  my $title  = shift;
-  my $future = http()->GET($url)->on_done(
+  my $url     = shift;
+  my $title   = shift;
+  my $segment = $SEGMENT{$url};
+  my $future  = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       segment($response);
@@ -130,7 +134,7 @@ sub teams
       $name =~ s{Chinese Taipei}{Taiwan};
       return if !$id;
       my $next = "https://api.team-manager.gc.com/public/teams/$id/games";
-      captured($SEGMENT{$url}->trace_header, \&team, $next, $id, $name, $title);
+      captured($segment->trace_header, \&team, $next, $id, $name, $title);
     }
   );
   push(@FUTURE, $future);
@@ -220,9 +224,10 @@ sub segment
 {
   my $response = shift;
   my $url      = $response->request->url->as_string;
-  return if !$SEGMENT{$url};
-  $SEGMENT{$url}->{end_time} = time;
-  $SEGMENT{$url}->{http}     = {
+  my $segment  = $SEGMENT{$url};
+  return if !$segment;
+  $segment->{end_time} = time;
+  $segment->{http}     = {
     request => {
       method => $response->request->method,
       url    => $url,
@@ -232,8 +237,7 @@ sub segment
       content_length => length($response->content),
     },
   };
-  my $elapsed =
-    int(($SEGMENT{$url}->{end_time} - $SEGMENT{$url}->{start_time}) * 1000);
+  my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
   warn "GET $url ($elapsed ms)\n";
 }
 
