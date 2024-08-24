@@ -72,7 +72,7 @@ $vevent->add_properties(
   dtend           => Date::ICal->new(epoch => time)->ical,
   summary         => 'Last Modified',
   uid             => 'Last Modified',
-  description     => last_modified_description(),
+  description     => trace(),
   'last-modified' => $now,
 );
 $ics->add_entry($vevent);
@@ -229,14 +229,20 @@ sub event
   push(@FUTURE, $future);
 }
 
-sub last_modified_description
+sub trace
 {
-  my $html;
-  for my $url (keys %SEGMENT)
+  my $region = $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
+  my $trace  = "https://$region.console.aws.amazon.com/cloudwatch/home?";
+  $trace .= "region=$region#xray:traces/";
+  if ($ENV{_X_AMZN_TRACE_ID})
   {
-    $html .= "<li>$url</li>";
+    $trace .= AWS::XRay->parse_trace_header($ENV{_X_AMZN_TRACE_ID});
   }
-  return "<ul>$html</ul>";
+  else
+  {
+    $trace .= AWS::XRay->new_trace_id();
+  }
+  return $trace;
 }
 
 sub http

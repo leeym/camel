@@ -19,10 +19,10 @@ my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
 my $loop  = new IO::Async::Loop;
 my $ics   = new Data::ICal;
+my @YEAR  = (2006, 2009, 2012, 2013, 2017, 2023, 2026);
 my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
-my @YEAR = (2006, 2009, 2012, 2013, 2017, 2023, 2026);
 
 for my $year (reverse sort @YEAR)
 {
@@ -53,7 +53,7 @@ $vevent->add_properties(
   dtend           => Date::ICal->new(epoch => time)->ical,
   summary         => 'Last Modified',
   uid             => 'Last Modified',
-  description     => last_modified_description(),
+  description     => trace(),
   'last-modified' => $now,
 );
 $ics->add_entry($vevent);
@@ -64,16 +64,6 @@ END
   die $@ if $@;
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
-}
-
-sub last_modified_description
-{
-  my $html;
-  for my $url (keys %SEGMENT)
-  {
-    $html .= "<li>$url</li>";
-  }
-  return "<ul>$html</ul>";
 }
 
 sub venue
@@ -157,6 +147,22 @@ sub event
     }
   );
   push(@FUTURE, $future);
+}
+
+sub trace
+{
+  my $region = $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
+  my $trace  = "https://$region.console.aws.amazon.com/cloudwatch/home?";
+  $trace .= "region=$region#xray:traces/";
+  if ($ENV{_X_AMZN_TRACE_ID})
+  {
+    $trace .= AWS::XRay->parse_trace_header($ENV{_X_AMZN_TRACE_ID});
+  }
+  else
+  {
+    $trace .= AWS::XRay->new_trace_id();
+  }
+  return $trace;
 }
 
 sub http
