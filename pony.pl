@@ -277,7 +277,7 @@ sub last_modified_description
   {
     $LI{Trace} =
         $url
-      . '"#logsV2:log-groups/log-group/'
+      . '#logsV2:log-groups/log-group/'
       . escaped($ENV{AWS_LAMBDA_LOG_GROUP_NAME})
       . '/log-events/'
       . escaped($ENV{AWS_LAMBDA_LOG_STREAM_NAME});
