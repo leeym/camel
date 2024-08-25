@@ -109,7 +109,6 @@ print $ics->as_string;
 
 END
 {
-  warn 'BUF: ' . Dumper(AWS::XRay->sock->{buf});
   AWS::XRay->sock->flush();
   die $@ if $@;
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
