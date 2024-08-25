@@ -1,3 +1,4 @@
+# $Id$
 my $file = shift;
 open(F, $file) || die $!;
 while(<F>)

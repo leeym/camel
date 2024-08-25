@@ -1,4 +1,5 @@
 #!/bin/sh
+# $Id$
 METHOD="GET"
 #METHOD="POST"
 CURL="curl -s -X $METHOD"

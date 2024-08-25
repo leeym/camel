@@ -1,3 +1,4 @@
+# $Id$
 opendir(D, '.') || die $!;
 my @QUERY;
 while (readdir(D))

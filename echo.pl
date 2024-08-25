@@ -1,1 +1,2 @@
+# $Id$
 print "@ARGV\n";
