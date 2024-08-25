@@ -19,8 +19,8 @@ $Data::Dumper::Terse    = 1;    # don't output names where feasible
 $Data::Dumper::Indent   = 0;    # turn off all pretty print
 $Data::Dumper::Sortkeys = 1;
 
-my $AUTO_FLUSH = shift // 1;
-AWS::XRay->auto_flush($AUTO_FLUSH);
+my $AUTO_CLOSE = shift // 1;
+AWS::XRay->auto_flush(1);
 
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
@@ -176,7 +176,7 @@ sub segment
       content_length => length($response->content),
     },
   };
-  $segment->close() if !$AWS::XRay::AUTO_FLUSH;
+  $segment->close() if !$AUTO_CLOSE;
   my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
   warn "GET $url ($elapsed ms)\n";
 }
@@ -281,7 +281,7 @@ sub capture_from
 sub capture
 {
   my ($name, $code) = @_;
-  return AWS::XRay::capture($name, $code) if $AWS::XRay::AUTO_FLUSH;
+  return AWS::XRay::capture($name, $code) if $AUTO_CLOSE;
   if (!AWS::XRay::is_valid_name($name))
   {
     my $msg = "invalid segment name: $name";
