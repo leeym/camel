@@ -245,10 +245,6 @@ sub segment
   return if !$segment;
   $segment->{end_time} = time;
   $segment->{http}     = {
-    request => {
-      method => $response->request->method,
-      url    => $url,
-    },
     response => {
       status         => $response->code,
       content_length => length($response->content),
@@ -268,6 +264,12 @@ sub captured
   my $code = sub {
     my $segment = shift;
     $SEGMENT{$url} = $segment;
+    $segment->{http} = {
+      request => {
+        method => 'GET',
+        url    => $url,
+      },
+    };
     $func->(@args);
   };
   my $name = $url;
