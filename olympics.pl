@@ -15,6 +15,10 @@ use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
 
+$Data::Dumper::Terse    = 1;    # don't output names where feasible
+$Data::Dumper::Indent   = 0;    # turn off all pretty print
+$Data::Dumper::Sortkeys = 1;
+
 my $AUTO_FLUSH = shift // 1;
 AWS::XRay->auto_flush($AUTO_FLUSH);
 
@@ -106,8 +110,12 @@ print $ics->as_string;
 
 END
 {
-  AWS::XRay->sock->flush() if !$AWS::XRay::AUTO_FLUSH;
-  die $@                   if $@;
+  if (!$AWS::XRay::AUTO_FLUSH)
+  {
+    warn 'SOCK: ' . Dumper(AWS::XRay->sock);
+    AWS::XRay->sock->flush();
+  }
+  die $@ if $@;
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
 }

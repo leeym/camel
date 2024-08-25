@@ -12,8 +12,9 @@ use Data::Dumper;
 use HTTP::Tiny;
 use JSON::XS qw/decode_json encode_json/;
 
-$Data::Dumper::Terse  = 1;    # don't output names where feasible
-$Data::Dumper::Indent = 0;    # turn off all pretty print
+$Data::Dumper::Terse    = 1;    # don't output names where feasible
+$Data::Dumper::Indent   = 0;    # turn off all pretty print
+$Data::Dumper::Sortkeys = 1;
 
 die "$0 only works in AWS Lambda\n" if !$ENV{AWS_LAMBDA_RUNTIME_API};
 
