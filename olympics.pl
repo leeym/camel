@@ -15,7 +15,7 @@ use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
 
-AWS::XRay->auto_flush(0);
+AWS::XRay->auto_flush(1);
 
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
@@ -105,11 +105,16 @@ print $ics->as_string;
 
 END
 {
-  for my $segment (values %SEGMENT)
+  if (!$AWS::XRay::AUTO_FLUSH)
   {
-    $segment->close();
+    for my $segment (values %SEGMENT)
+    {
+      $segment->close();
+      warn "Closed segment: " . $segment->{name} . "\n";
+    }
+    warn Dumper(AWS::XRay->sock);
+    AWS::XRay->sock->flush();
   }
-  AWS::XRay->sock->flush();
   die $@ if $@;
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
@@ -277,6 +282,7 @@ sub capture_from
 sub capture
 {
   my ($name, $code) = @_;
+  return AWS::XRay::capture($name, $code) if $AWS::XRay::AUTO_FLUSH;
   if (!AWS::XRay::is_valid_name($name))
   {
     my $msg = "invalid segment name: $name";
@@ -331,6 +337,7 @@ sub capture
       $code->($segment);
     }
   };
+  warn "Opened segment: " . $segment->{name} . "\n";
   my $error = $@;
   if ($error)
   {
