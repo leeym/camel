@@ -106,12 +106,8 @@ print $ics->as_string;
 
 END
 {
-  if (!$AWS::XRay::AUTO_FLUSH)
-  {
-    warn Dumper(AWS::XRay->sock);
-    AWS::XRay->sock->flush();
-  }
-  die $@ if $@;
+  AWS::XRay->sock->flush() if !$AWS::XRay::AUTO_FLUSH;
+  die $@                   if $@;
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
 }
@@ -172,11 +168,7 @@ sub segment
       content_length => length($response->content),
     },
   };
-  if (!$AWS::XRay::AUTO_FLUSH)
-  {
-    $segment->close();
-    warn "Closed segment: " . $segment->{name} . "\n";
-  }
+  $segment->close() if !$AWS::XRay::AUTO_FLUSH;
   my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
   warn "GET $url ($elapsed ms)\n";
 }
@@ -271,10 +263,9 @@ sub capture_from
   my ($trace_id, $segment_id, $sampled) =
     AWS::XRay->parse_trace_header($header);
 
-  local $AWS::XRay::SAMPLED = $sampled // $AWS::XRay::SAMPLER->();
-  local $AWS::XRay::ENABLED = $AWS::XRay::SAMPLED;
-  local ($AWS::XRay::TRACE_ID, $AWS::XRay::SEGMENT_ID) =
-    ($trace_id, $segment_id);
+  $AWS::XRay::SAMPLED = $sampled // $AWS::XRay::SAMPLER->();
+  $AWS::XRay::ENABLED = $AWS::XRay::SAMPLED;
+  ($AWS::XRay::TRACE_ID, $AWS::XRay::SEGMENT_ID) = ($trace_id, $segment_id);
   capture($name, $code);
 }
 
@@ -306,13 +297,12 @@ sub capture
     $sampled = $AWS::XRay::SAMPLER->() ? 1 : 0;
     $enabled = $sampled                ? 1 : 0;
   }
-  local $AWS::XRay::ENABLED = $enabled;
-  local $AWS::XRay::SAMPLED = $sampled;
+  $AWS::XRay::ENABLED = $enabled;
+  $AWS::XRay::SAMPLED = $sampled;
 
   return $code->(AWS::XRay::Segment->new) if !$enabled;
 
-  local $AWS::XRay::TRACE_ID = $AWS::XRay::TRACE_ID
-    // AWS::XRay::new_trace_id();
+  $AWS::XRay::TRACE_ID = $AWS::XRay::TRACE_ID // AWS::XRay::new_trace_id();
 
   my $segment = AWS::XRay::Segment->new({ name => $name });
   unless (defined $segment->{type} && $segment->{type} eq "subsegment")
@@ -320,7 +310,7 @@ sub capture
     $_->apply_plugin($segment) for @AWS::XRay::PLUGINS;
   }
 
-  local $AWS::XRay::SEGMENT_ID = $segment->{id};
+  $AWS::XRay::SEGMENT_ID = $segment->{id};
 
   my @ret;
   eval {
@@ -337,7 +327,6 @@ sub capture
       $code->($segment);
     }
   };
-  warn "Opened segment: " . $segment->{name} . "\n";
   my $error = $@;
   if ($error)
   {
