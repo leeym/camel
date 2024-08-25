@@ -20,7 +20,7 @@ $Data::Dumper::Indent   = 0;    # turn off all pretty print
 $Data::Dumper::Sortkeys = 1;
 
 my $AUTO_CLOSE = shift // 1;
-AWS::XRay->auto_flush(1);
+AWS::XRay->auto_flush(0);
 
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
