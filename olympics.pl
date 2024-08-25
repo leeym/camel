@@ -164,7 +164,7 @@ sub segment
   $segment->{end_time} = time;
   $segment->{http}     = {
     request => {
-      method => 'GET',
+      method => $response->request->method,
       url    => $url,
     },
     response => {

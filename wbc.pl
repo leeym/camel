@@ -1,6 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
-use AWS::XRay qw(capture capture_from);
+use AWS::XRay;
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
@@ -14,6 +14,12 @@ use POSIX       qw(mktime);
 use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
+
+$Data::Dumper::Terse    = 1;    # don't output names where feasible
+$Data::Dumper::Indent   = 0;    # turn off all pretty print
+$Data::Dumper::Sortkeys = 1;
+
+AWS::XRay->auto_flush(0);
 
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
@@ -61,6 +67,7 @@ print $ics->as_string;
 
 END
 {
+  AWS::XRay->sock->flush();
   die $@ if $@;
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
@@ -161,11 +168,16 @@ sub segment
   return if !$segment;
   $segment->{end_time} = time;
   $segment->{http}     = {
+    request => {
+      method => $response->request->method,
+      url    => $url,
+    },
     response => {
       status         => $response->code,
       content_length => length($response->content),
     },
   };
+  $segment->close();
   my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
   warn "GET $url ($elapsed ms)\n";
 }
@@ -180,23 +192,17 @@ sub captured
   my $code = sub {
     my $segment = shift;
     $SEGMENT{$url} = $segment;
-    $segment->{http} = {
-      request => {
-        method => 'GET',
-        url    => $url,
-      },
-    };
     $func->(@args);
   };
   my $name = $url;
   $name =~ s{\?}{#}g;
   if ($header)
   {
-    capture_from $header, $name => $code;
+    capture_from($header, $name, $code);
   }
   else
   {
-    capture $name => $code;
+    capture($name, $code);
   }
 }
 
@@ -257,4 +263,92 @@ sub unordered
     $html .= '<li><a href="' . $LI{$text} . '">' . $text . '</a></li>';
   }
   return '<ul>' . $html . '</ul>';
+}
+
+# Cloned from AWS::XRay::capture_from
+sub capture_from
+{
+  my ($header, $name, $code) = @_;
+  my ($trace_id, $segment_id, $sampled) =
+    AWS::XRay::parse_trace_header($header);
+
+  $AWS::XRay::SAMPLED = $sampled // $AWS::XRay::SAMPLER->();
+  $AWS::XRay::ENABLED = $AWS::XRay::SAMPLED;
+  ($AWS::XRay::TRACE_ID, $AWS::XRay::SEGMENT_ID) = ($trace_id, $segment_id);
+  capture($name, $code);
+}
+
+# Cloned from AWS::XRay::capture without closing the segment
+sub capture
+{
+  my ($name, $code) = @_;
+  if (!AWS::XRay::is_valid_name($name))
+  {
+    my $msg = "invalid segment name: $name";
+    $AWS::XRay::CROAK_INVALID_NAME ? croak($msg) : carp($msg);
+  }
+  my $wantarray = wantarray;
+
+  my $enabled;
+  my $sampled = $AWS::XRay::SAMPLED;
+  if (defined $AWS::XRay::SAMPLED)
+  {
+    $enabled = $AWS::XRay::ENABLED ? 1 : 0;    # fix true or false (not undef)
+  }
+  elsif ($AWS::XRay::TRACE_ID)
+  {
+    $enabled = 0;                              # called from parent capture
+  }
+  else
+  {
+    # root capture try sampling
+    $sampled = $AWS::XRay::SAMPLER->() ? 1 : 0;
+    $enabled = $sampled                ? 1 : 0;
+  }
+  $AWS::XRay::ENABLED = $enabled;
+  $AWS::XRay::SAMPLED = $sampled;
+
+  return $code->(AWS::XRay::Segment->new) if !$enabled;
+
+  $AWS::XRay::TRACE_ID = $AWS::XRay::TRACE_ID // AWS::XRay::new_trace_id();
+
+  my $segment = AWS::XRay::Segment->new({ name => $name });
+  unless (defined $segment->{type} && $segment->{type} eq "subsegment")
+  {
+    $_->apply_plugin($segment) for @AWS::XRay::PLUGINS;
+  }
+
+  $AWS::XRay::SEGMENT_ID = $segment->{id};
+
+  my @ret;
+  eval {
+    if ($wantarray)
+    {
+      @ret = $code->($segment);
+    }
+    elsif (defined $wantarray)
+    {
+      $ret[0] = $code->($segment);
+    }
+    else
+    {
+      $code->($segment);
+    }
+  };
+  my $error = $@;
+  if ($error)
+  {
+    $segment->{error} = Types::Serialiser::true;
+    $segment->{cause} = {
+      exceptions => [
+        {
+          id      => new_id(),
+          message => "$error",
+          remote  => Types::Serialiser::true,
+        },
+      ],
+    };
+  }
+  die $error if $error;
+  return $wantarray ? @ret : $ret[0];
 }
