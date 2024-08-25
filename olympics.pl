@@ -19,7 +19,6 @@ $Data::Dumper::Terse    = 1;    # don't output names where feasible
 $Data::Dumper::Indent   = 0;    # turn off all pretty print
 $Data::Dumper::Sortkeys = 1;
 
-my $AUTO_CLOSE = shift // 1;
 AWS::XRay->auto_flush(0);
 
 my $start = time();
@@ -110,11 +109,7 @@ print $ics->as_string;
 
 END
 {
-  if (!$AWS::XRay::AUTO_FLUSH)
-  {
-    warn 'SOCK: ' . Dumper(AWS::XRay->sock);
-    AWS::XRay->sock->flush();
-  }
+  AWS::XRay->sock->flush();
   die $@ if $@;
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
@@ -177,7 +172,7 @@ sub segment
       content_length => length($response->content),
     },
   };
-  $segment->close() if !$AUTO_CLOSE;
+  $segment->close();
   my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
   warn "GET $url ($elapsed ms)\n";
 }
@@ -282,7 +277,6 @@ sub capture_from
 sub capture
 {
   my ($name, $code) = @_;
-  return AWS::XRay::capture($name, $code) if $AUTO_CLOSE;
   if (!AWS::XRay::is_valid_name($name))
   {
     my $msg = "invalid segment name: $name";
