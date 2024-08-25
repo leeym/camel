@@ -253,7 +253,7 @@ sub segment
       url    => $url,
     },
     response => {
-      status         => $response->code,
+      status         => int($response->code),
       content_length => length($response->content),
     },
   };
