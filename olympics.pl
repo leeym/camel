@@ -166,7 +166,8 @@ sub segment
   my $url      = $response->request->url->as_string;
   my $segment  = $SEGMENT{$url};
   return if !$segment;
-  $segment->{http} = {
+  $segment->{end_time} = time;
+  $segment->{http}     = {
     request => {
       method => 'GET',
       url    => $url,
