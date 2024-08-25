@@ -1,6 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
-use AWS::XRay qw(capture capture_from);
+use AWS::XRay;
 use Data::Dumper;
 use Data::ICal::Entry::Event;
 use Data::ICal;
@@ -105,6 +105,11 @@ print $ics->as_string;
 
 END
 {
+  for my $segment (values %SEGMENT)
+  {
+    eval { $segment->close(); };
+    warn $@ if $@;
+  }
   AWS::XRay->sock->flush();
   die $@ if $@;
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
@@ -159,6 +164,10 @@ sub segment
   return if !$segment;
   $segment->{end_time} = time;
   $segment->{http}     = {
+    request => {
+      method => 'GET',
+      url    => $url,
+    },
     response => {
       status         => $response->code,
       content_length => length($response->content),
@@ -166,36 +175,6 @@ sub segment
   };
   my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
   warn "GET $url ($elapsed ms)\n";
-}
-
-sub captured
-{
-  my $header = shift;
-  my $func   = shift;
-  my @args   = @_;
-  my $url    = $args[0];
-  return if $SEGMENT{$url};
-  my $code = sub {
-    my $segment = shift;
-    $SEGMENT{$url} = $segment;
-    $segment->{http} = {
-      request => {
-        method => 'GET',
-        url    => $url,
-      },
-    };
-    $func->(@args);
-  };
-  my $name = $url;
-  $name =~ s{\?}{#}g;
-  if ($header)
-  {
-    capture_from $header, $name => $code;
-  }
-  else
-  {
-    capture $name => $code;
-  }
 }
 
 sub last_modified_description
@@ -255,4 +234,118 @@ sub unordered
     $html .= '<li><a href="' . $LI{$text} . '">' . $text . '</a></li>';
   }
   return '<ul>' . $html . '</ul>';
+}
+
+sub captured
+{
+  my $header = shift;
+  my $func   = shift;
+  my @args   = @_;
+  my $url    = $args[0];
+  return if $SEGMENT{$url};
+  my $code = sub {
+    my $segment = shift;
+    $SEGMENT{$url} = $segment;
+    $func->(@args);
+  };
+  my $name = $url;
+  $name =~ s{\?}{#}g;
+  if ($header)
+  {
+    capture_from($header, $name, $code);
+  }
+  else
+  {
+    capture($name, $code);
+  }
+}
+
+# Cloned from AWS::XRay::capture_from
+sub capture_from
+{
+  my ($header, $name, $code) = @_;
+  my ($trace_id, $segment_id, $sampled) =
+    AWS::XRay->parse_trace_header($header);
+
+  local $AWS::XRay::SAMPLED = $sampled // $AWS::XRay::SAMPLER->();
+  local $AWS::XRay::ENABLED = $AWS::XRay::SAMPLED;
+  local ($AWS::XRay::TRACE_ID, $AWS::XRay::SEGMENT_ID) =
+    ($trace_id, $segment_id);
+  capture($name, $code);
+}
+
+# Cloned from AWS::XRay::capture without closing the segment
+sub capture
+{
+  my ($name, $code) = @_;
+  if (!AWS::XRay::is_valid_name($name))
+  {
+    my $msg = "invalid segment name: $name";
+    $AWS::XRay::CROAK_INVALID_NAME ? croak($msg) : carp($msg);
+  }
+  my $wantarray = wantarray;
+
+  my $enabled;
+  my $sampled = $AWS::XRay::SAMPLED;
+  if (defined $AWS::XRay::SAMPLED)
+  {
+    $enabled = $AWS::XRay::ENABLED ? 1 : 0;    # fix true or false (not undef)
+  }
+  elsif ($AWS::XRay::TRACE_ID)
+  {
+    $enabled = 0;                              # called from parent capture
+  }
+  else
+  {
+    # root capture try sampling
+    $sampled = $AWS::XRay::SAMPLER->() ? 1 : 0;
+    $enabled = $sampled                ? 1 : 0;
+  }
+  local $AWS::XRay::ENABLED = $enabled;
+  local $AWS::XRay::SAMPLED = $sampled;
+
+  return $code->(AWS::XRay::Segment->new) if !$enabled;
+
+  local $AWS::XRay::TRACE_ID = $AWS::XRay::TRACE_ID
+    // AWS::XRay::new_trace_id();
+
+  my $segment = AWS::XRay::Segment->new({ name => $name });
+  unless (defined $segment->{type} && $segment->{type} eq "subsegment")
+  {
+    $_->apply_plugin($segment) for @AWS::XRay::PLUGINS;
+  }
+
+  local $AWS::XRay::SEGMENT_ID = $segment->{id};
+
+  my @ret;
+  eval {
+    if ($wantarray)
+    {
+      @ret = $code->($segment);
+    }
+    elsif (defined $wantarray)
+    {
+      $ret[0] = $code->($segment);
+    }
+    else
+    {
+      $code->($segment);
+    }
+  };
+  my $error = $@;
+  if ($error)
+  {
+    $segment->{error} = Types::Serialiser::true;
+    $segment->{cause} = {
+      exceptions => [
+        {
+          id      => new_id(),
+          message => "$error",
+          remote  => Types::Serialiser::true,
+        },
+      ],
+    };
+  }
+  die $error if $error;
+  return $wantarray ? @ret : $ret[0];
 }
