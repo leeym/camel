@@ -279,7 +279,7 @@ sub captured
 sub last_modified_description
 {
   my %LI;
-  my $region = region();
+  my $region = $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
   my $url;
   $url .= "https://$region.console.aws.amazon.com/cloudwatch/home?";
   $url .= "region=$region";
@@ -317,11 +317,6 @@ sub escaped
   $dst =~ s{\$}{%24}g;
   $dst =~ s{%}{\$25}g;
   return $dst;
-}
-
-sub region
-{
-  return $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
 }
 
 sub unordered

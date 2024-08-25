@@ -61,10 +61,8 @@ sub pony
       my $response = shift;
       segment($response);
       my $html = $response->content;
-      my $next = build_url(
-        base_uri => 'https://www.pony.org',
-        path     => $1,
-      ) if $html =~ m{<a [^>]*href="([^"]+)">Baseball World Series</a>};
+      my $next = "https://www.pony.org/$1"
+        if $html =~ m{<a [^>]*href="([^"]+)">Baseball World Series</a>};
       return if !$next;
       captured($segment->trace_header, $next, sub { schedules($next) });
     }
@@ -133,19 +131,25 @@ sub teams
       $name =~ s{Chinese Taipei}{Taiwan};
       return if !$id;
       my $next = "https://api.team-manager.gc.com/public/teams/$id/games";
-      captured($segment->trace_header, $next,
-        sub { team($next, $id, $name, $title) });
+      captured($segment->trace_header, api($id),
+        sub { team($id, $name, $title) });
     }
   );
   push(@FUTURE, $future);
 }
 
+sub api
+{
+  my $id = shift;
+  return "https://api.team-manager.gc.com/public/teams/$id/games";
+}
+
 sub team
 {
-  my $url    = shift;
   my $id     = shift;
   my $name   = shift;
   my $title  = shift;
+  my $url    = api($id);
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
@@ -180,7 +184,8 @@ sub team
 
         warn $g->{start_ts} . " $summary\n";
         my %LI;
-        $LI{Team} = "https://web.gc.com/teams/$id";
+        $LI{Home}     = "https://web.gc.com/teams/$id";
+        $LI{Schedule} = "https://web.gc.com/teams/$id/schedule";
         my $description = unordered(%LI);
         my $vevent      = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
@@ -268,7 +273,7 @@ sub captured
 sub last_modified_description
 {
   my %LI;
-  my $region = region();
+  my $region = $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
   my $url;
   $url .= "https://$region.console.aws.amazon.com/cloudwatch/home?";
   $url .= "region=$region";
@@ -306,11 +311,6 @@ sub escaped
   $dst =~ s{\$}{%24}g;
   $dst =~ s{%}{\$25}g;
   return $dst;
-}
-
-sub region
-{
-  return $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
 }
 
 sub unordered
