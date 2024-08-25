@@ -108,11 +108,6 @@ END
 {
   if (!$AWS::XRay::AUTO_FLUSH)
   {
-    for my $segment (values %SEGMENT)
-    {
-      $segment->close();
-      warn "Closed segment: " . $segment->{name} . "\n";
-    }
     warn Dumper(AWS::XRay->sock);
     AWS::XRay->sock->flush();
   }
@@ -167,8 +162,7 @@ sub segment
   my $url      = $response->request->url->as_string;
   my $segment  = $SEGMENT{$url};
   return if !$segment;
-  $segment->{end_time} = time;
-  $segment->{http}     = {
+  $segment->{http} = {
     request => {
       method => 'GET',
       url    => $url,
@@ -178,6 +172,11 @@ sub segment
       content_length => length($response->content),
     },
   };
+  if (!$AWS::XRay::AUTO_FLUSH)
+  {
+    $segment->close();
+    warn "Closed segment: " . $segment->{name} . "\n";
+  }
   my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
   warn "GET $url ($elapsed ms)\n";
 }
