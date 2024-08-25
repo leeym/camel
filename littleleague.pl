@@ -290,7 +290,7 @@ sub last_modified_description
   }
   if ($ENV{AWS_LAMBDA_LOG_STREAM_NAME} && $ENV{AWS_LAMBDA_LOG_GROUP_NAME})
   {
-    $LI{'Log groups'} =
+    $LI{'Logs'} =
         $url
       . '#logsV2:log-groups/log-group/'
       . escaped($ENV{AWS_LAMBDA_LOG_GROUP_NAME})
