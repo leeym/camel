@@ -150,7 +150,7 @@ sub calendar
       {
         next if $next !~ m{/events/\d{4}-.*/\w+$};
         $next =~ s{/\w+$}{/schedule-and-results};
-        captured($SEGMENT{$url}, \&events, $next);
+        captured($SEGMENT{$url}->trace_header, \&events, $next);
       }
     }
   );
