@@ -269,7 +269,7 @@ sub capture_from
 {
   my ($header, $name, $code) = @_;
   my ($trace_id, $segment_id, $sampled) =
-    AWS::XRay->parse_trace_header($header);
+    AWS::XRay::parse_trace_header($header);
 
   $AWS::XRay::SAMPLED = $sampled // $AWS::XRay::SAMPLER->();
   $AWS::XRay::ENABLED = $AWS::XRay::SAMPLED;
