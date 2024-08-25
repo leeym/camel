@@ -107,8 +107,7 @@ END
 {
   for my $segment (values %SEGMENT)
   {
-    eval { $segment->close(); };
-    warn $@ if $@;
+    $segment->close();
   }
   AWS::XRay->sock->flush();
   die $@ if $@;
