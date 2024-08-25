@@ -29,7 +29,8 @@ my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
 
-captured($ENV{_X_AMZN_TRACE_ID}, \&pony, 'https://www.pony.org/');
+my $url = 'https://www.pony.org/';
+captured($ENV{_X_AMZN_TRACE_ID}, $url, sub { pony($url) });
 
 for my $future (@FUTURE)
 {
@@ -40,16 +41,7 @@ for my $vevent (sort by_dtstart values %VEVENT)
 {
   $ics->add_entry($vevent);
 }
-my $vevent = Data::ICal::Entry::Event->new();
-$vevent->add_properties(
-  dtstart         => Date::ICal->new(epoch => $start)->ical,
-  dtend           => Date::ICal->new(epoch => time)->ical,
-  summary         => 'Last Modified',
-  uid             => 'Last Modified',
-  description     => last_modified_description(),
-  'last-modified' => $now,
-);
-$ics->add_entry($vevent);
+$ics->add_entry(last_modified_event());
 print $ics->as_string;
 
 END
@@ -74,7 +66,7 @@ sub pony
         path     => $1,
       ) if $html =~ m{<a [^>]*href="([^"]+)">Baseball World Series</a>};
       return if !$next;
-      captured($segment->trace_header, \&schedules, $next);
+      captured($segment->trace_header, $next, sub { schedules($next) });
     }
   );
   push(@FUTURE, $future);
@@ -96,7 +88,7 @@ sub schedules
         $html = $';
         next if $text !~ m{World Series};
         next if $text !~ m{1(2|4|8)U};
-        captured($segment->trace_header, \&event, $href, $text);
+        captured($segment->trace_header, $href, sub { event($href, $text) });
       }
     }
   );
@@ -119,7 +111,7 @@ sub event
         path     => $1,
       ) if $html =~ m{<a [^>]*href="([^"]+)">GameChanger[^<]*</a>};
       return if !$next;
-      captured($segment->trace_header, \&teams, $next, $title);
+      captured($segment->trace_header, $next, sub { teams($next, $title) });
     }
   );
   push(@FUTURE, $future);
@@ -141,7 +133,8 @@ sub teams
       $name =~ s{Chinese Taipei}{Taiwan};
       return if !$id;
       my $next = "https://api.team-manager.gc.com/public/teams/$id/games";
-      captured($segment->trace_header, \&team, $next, $id, $name, $title);
+      captured($segment->trace_header, $next,
+        sub { team($next, $id, $name, $title) });
     }
   );
   push(@FUTURE, $future);
@@ -252,14 +245,13 @@ sub segment
 sub captured
 {
   my $header = shift;
+  my $url    = shift;
   my $func   = shift;
-  my @args   = @_;
-  my $url    = $args[0];
   return if $SEGMENT{$url};
   my $code = sub {
     my $segment = shift;
     $SEGMENT{$url} = $segment;
-    $func->(@args);
+    $func->();
   };
   my $name = $url;
   $name =~ s{\?}{#}g;
@@ -418,4 +410,18 @@ sub capture
   }
   die $error if $error;
   return $wantarray ? @ret : $ret[0];
+}
+
+sub last_modified_event
+{
+  my $vevent = Data::ICal::Entry::Event->new();
+  $vevent->add_properties(
+    dtstart         => Date::ICal->new(epoch => $start)->ical,
+    dtend           => Date::ICal->new(epoch => time)->ical,
+    summary         => 'Last Modified',
+    uid             => 'Last Modified',
+    description     => last_modified_description(),
+    'last-modified' => $now,
+  );
+  return $vevent;
 }

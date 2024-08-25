@@ -39,7 +39,7 @@ my $url = build_url(
   path     => '/summer/schedules/api/ENG/schedule/noc/TPE',
 );
 
-captured($ENV{_X_AMZN_TRACE_ID}, \&olympics, $url);
+captured($ENV{_X_AMZN_TRACE_ID}, $url, sub { olympics($url) });
 
 sub olympics
 {
@@ -239,14 +239,13 @@ sub unordered
 sub captured
 {
   my $header = shift;
+  my $url    = shift;
   my $func   = shift;
-  my @args   = @_;
-  my $url    = $args[0];
   return if $SEGMENT{$url};
   my $code = sub {
     my $segment = shift;
     $SEGMENT{$url} = $segment;
-    $func->(@args);
+    $func->();
   };
   my $name = $url;
   $name =~ s{\?}{#}g;

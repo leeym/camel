@@ -59,7 +59,7 @@ for my $year (reverse sort @YEAR)
       base_uri => 'https://www.littleleague.org',
       path     => "/world-series/$year/$type/teams/asia-pacific-region/",
     );
-    captured($ENV{_X_AMZN_TRACE_ID}, \&event, $url, $type, $year);
+    captured($ENV{_X_AMZN_TRACE_ID}, $url, sub { event($url, $type, $year) });
   }
 }
 
@@ -72,16 +72,7 @@ for my $vevent (sort by_dtstart values %VEVENT)
 {
   $ics->add_entry($vevent);
 }
-my $vevent = Data::ICal::Entry::Event->new();
-$vevent->add_properties(
-  dtstart         => Date::ICal->new(epoch => $start)->ical,
-  dtend           => Date::ICal->new(epoch => time)->ical,
-  summary         => 'Last Modified',
-  uid             => 'Last Modified',
-  description     => last_modified_description(),
-  'last-modified' => $now,
-);
-$ics->add_entry($vevent);
+$ics->add_entry(last_modified_event());
 print $ics->as_string;
 
 END
@@ -265,14 +256,13 @@ sub segment
 sub captured
 {
   my $header = shift;
+  my $url    = shift;
   my $func   = shift;
-  my @args   = @_;
-  my $url    = $args[0];
   return if $SEGMENT{$url};
   my $code = sub {
     my $segment = shift;
     $SEGMENT{$url} = $segment;
-    $func->(@args);
+    $func->();
   };
   my $name = $url;
   $name =~ s{\?}{#}g;
@@ -431,4 +421,18 @@ sub capture
   }
   die $error if $error;
   return $wantarray ? @ret : $ret[0];
+}
+
+sub last_modified_event
+{
+  my $vevent = Data::ICal::Entry::Event->new();
+  $vevent->add_properties(
+    dtstart         => Date::ICal->new(epoch => $start)->ical,
+    dtend           => Date::ICal->new(epoch => time)->ical,
+    summary         => 'Last Modified',
+    uid             => 'Last Modified',
+    description     => last_modified_description(),
+    'last-modified' => $now,
+  );
+  return $vevent;
 }
