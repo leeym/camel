@@ -15,6 +15,8 @@ use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
 
+AWS::XRay->auto_flush(0);
+
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
 my $ics   = new Data::ICal;
@@ -103,6 +105,7 @@ print $ics->as_string;
 
 END
 {
+  AWS::XRay->sock->flush();
   die $@ if $@;
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
@@ -156,6 +159,10 @@ sub segment
   return if !$segment;
   $segment->{end_time} = time;
   $segment->{http}     = {
+    request => {
+      method => 'GET',
+      url    => $url,
+    },
     response => {
       status         => $response->code,
       content_length => length($response->content),
@@ -174,12 +181,6 @@ sub captured
   return if $SEGMENT{$url};
   my $code = sub {
     my $segment = shift;
-    $segment->{http} = {
-      request => {
-        method => 'GET',
-        url    => $url,
-      },
-    };
     $SEGMENT{$url} = $segment;
     $func->(@args);
   };
