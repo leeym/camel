@@ -15,7 +15,8 @@ use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
 
-AWS::XRay->auto_flush(1);
+my $AUTO_FLUSH = shift // 1;
+AWS::XRay->auto_flush($AUTO_FLUSH);
 
 my $start = time();
 my $now   = Date::ICal->new(epoch => $start)->ical;
