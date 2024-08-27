@@ -11,8 +11,8 @@ sub handle
   my $context = shift;
   warn 'PAYLOAD: ' . Dumper($payload);
   warn 'CONTEXT: ' . Dumper($context);
+
   my %JSON;
-  $JSON{statusCode}              = 200;
   $JSON{isBase64Encoded}         = \0;
   $JSON{headers}{'Content-Type'} = 'text/plain';
 
@@ -99,6 +99,7 @@ sub discover
 {
   my %Q = @_;
   my @ARG;
+  $ENV{LANG} = 'C';
   push(@ARG, '/opt/bin/perl');
   if (!$Q{q})
   {
