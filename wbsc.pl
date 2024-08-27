@@ -165,6 +165,7 @@ sub events
       my $d = decode_json($data);
       my $t = $d->{props}->{tournament};
 
+      my $logs;
       for my $g (@{ $d->{props}->{games} })
       {
         next if $VEVENT{ $g->{id} };
@@ -194,9 +195,9 @@ sub events
           mon   => $min,
           sec   => 1,
         )->ical;
-        warn "$start ($ENV{TZ}) $summary\n";
+        $logs .= "$start ($ENV{TZ}) $summary\n";
         my $duration = $g->{duration} || duration($summary);
-        my ($hour, $min) = split(/\D/, $duration);
+        ($hour, $min) = split(/\D/, $duration);
         $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
         my $standings = $url;
         $standings =~ s,schedule-and-results,standings,;
@@ -220,6 +221,7 @@ sub events
         );
         $VEVENT{ $g->{id} } = $vevent;
       }
+      warn $logs if $logs;
     }
   );
   push(@FUTURE, $future);
