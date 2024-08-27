@@ -8,17 +8,13 @@ use Data::ICal;
 use Date::ICal;
 use IO::Async::SSL;
 use IO::Socket::SSL;
-use JSON::XS qw(decode_json);
+use JSON::XS qw(decode_json encode_json);
 use Net::Async::HTTP;
 use Net::SSLeay;
 use POSIX       qw(mktime);
 use Time::HiRes qw(time);
 use strict;
 
-if ($ENV{AWS_LAMBDA_RUNTIME_API})
-{
-  $Data::Dumper::Indent = 0;    # turn off all pretty print
-}
 $Data::Dumper::Terse    = 1;    # don't output names where feasible
 $Data::Dumper::Sortkeys = 1;
 
@@ -102,8 +98,8 @@ sub tz
   {
     return $t->{hostinfo}->{$country}->{timezone};
   }
-  warn 'G:' . Dumper($g);
-  warn 'T:' . Dumper($t);
+  WARN('G:' . Dumper($g));
+  WARN('T:' . Dumper($t));
   die 'Unable to determine timezone for venueid:'
     . $g->{venueid}
     . ' location:'
@@ -224,7 +220,7 @@ sub events
         $VEVENT{ $g->{id} } = $vevent;
         $LOGS{ $g->{id} }   = "$start ($ENV{TZ}) $summary";
       }
-      warn Dumper(\%LOGS) . "\n" if %LOGS;
+      WARN(\%LOGS) . "\n" if %LOGS;
     }
   );
   push(@FUTURE, $future);
@@ -440,4 +436,16 @@ sub last_modified_event
     'last-modified' => $now,
   );
   return $vevent;
+}
+
+sub WARN
+{
+  if ($ENV{AWS_LAMBDA_RUNTIME_API})
+  {
+    warn encode_json(@_);
+  }
+  else
+  {
+    warn Dumper(@_);
+  }
 }
