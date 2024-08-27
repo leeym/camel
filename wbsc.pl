@@ -15,8 +15,11 @@ use POSIX       qw(mktime);
 use Time::HiRes qw(time);
 use strict;
 
+if ($ENV{AWS_LAMBDA_RUNTIME_API})
+{
+  $Data::Dumper::Indent = 0;    # turn off all pretty print
+}
 $Data::Dumper::Terse    = 1;    # don't output names where feasible
-$Data::Dumper::Indent   = 0;    # turn off all pretty print
 $Data::Dumper::Sortkeys = 1;
 
 AWS::XRay->auto_flush(0);
@@ -165,7 +168,7 @@ sub events
       my $d = decode_json($data);
       my $t = $d->{props}->{tournament};
 
-      my $logs;
+      my %LOGS;
       for my $g (@{ $d->{props}->{games} })
       {
         next if $VEVENT{ $g->{id} };
@@ -195,7 +198,6 @@ sub events
           mon   => $min,
           sec   => 1,
         )->ical;
-        $logs .= "$start ($ENV{TZ}) $summary\n";
         my $duration = $g->{duration} || duration($summary);
         ($hour, $min) = split(/\D/, $duration);
         $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
@@ -220,8 +222,9 @@ sub events
           url             => $boxscore,
         );
         $VEVENT{ $g->{id} } = $vevent;
+        $LOGS{ $g->{id} }   = "$start ($ENV{TZ}) $summary";
       }
-      warn $logs if $logs;
+      warn Dumper(\%LOGS) if %LOGS;
     }
   );
   push(@FUTURE, $future);
