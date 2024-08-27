@@ -224,7 +224,7 @@ sub events
         $VEVENT{ $g->{id} } = $vevent;
         $LOGS{ $g->{id} }   = "$start ($ENV{TZ}) $summary";
       }
-      warn Dumper(\%LOGS) if %LOGS;
+      warn Dumper(\%LOGS) . "\n" if %LOGS;
     }
   );
   push(@FUTURE, $future);
