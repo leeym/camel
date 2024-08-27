@@ -5,6 +5,8 @@ sub handle
 {
   my $payload = shift;
   my $context = shift;
+  warn 'PAYLOAD: ' . Dumper($payload);
+  warn 'CONTEXT: ' . Dumper($context);
   my %JSON;
   $JSON{statusCode}              = 200;
   $JSON{isBase64Encoded}         = \0;
@@ -57,7 +59,6 @@ sub handle
 sub parse
 {
   my $payload = shift;
-  warn 'PAYLOAD: ' . Dumper($payload);
   my %P;
   if ($payload->{httpMethod} eq 'GET')
   {
