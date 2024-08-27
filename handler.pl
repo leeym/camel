@@ -1,6 +1,10 @@
 use Capture::Tiny ':all';
 use Data::Dumper;
 
+$Data::Dumper::Terse    = 1;    # don't output names where feasible
+$Data::Dumper::Indent   = 0;    # turn off all pretty print
+$Data::Dumper::Sortkeys = 1;
+
 sub handle
 {
   my $payload = shift;
