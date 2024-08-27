@@ -26,17 +26,15 @@ The following example is in Oregon (us-west-2) so please replace it with your ow
 Steps to deploy Camel in AWS Lambda.
 1. [Create function](https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/create/function)
    * Function name: Name it whatever you like. In this example I simply call it "Camel"
-   * Runtime: "Provide your own boostrap"
+   * Runtime: "Amazon Linux 2023"
+   * Architecture: either one is fine. I use "amd64"
    * Execution role: "Use an existing role" if you already have one, otherwise "Create a new role with basic Lambda permissions"
 2. [Add a layer](https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/add/layer?function=Camel)
    * Provide a layer version ARN: "arn:aws:lambda:us-west-2:445285296882:layer:perl-5-40-runtime-al2023-arm64:2"
-3. [Configuration](https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/functions/Camel?tab=graph)
-   * Basic settings
-      * Timeout: 0 min 28 sec
-   * Function code
-      * Runtime: "Custom runtime"
-      * Handler: Not in use. You can put whatever you want or leave it as is. Default: "hello.handler"
-      * Code entry type: "Upload a .zip file" -> "Upload" func.zip -> "Save"
+3. [Code](https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/functions/Camel?tab=code)
+   * Runtime settings
+      * Runtime: "Amazon Linux 2023"
+      * Handler: "handler.handle"
 
 Steps to expose Camel in AWS API Gateway
 1. [Create API](https://us-west-2.console.aws.amazon.com/apigateway/home?region=us-west-2#/apis/create)
