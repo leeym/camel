@@ -1,4 +1,3 @@
-# $Id$
 # Camel
 Camel is a Perl5-based service framework and standardized RPC running in AWS Lambda.
 
@@ -25,23 +24,24 @@ The following example is in Oregon (us-west-2) so please replace it with your ow
 
 Steps to deploy Camel in AWS Lambda.
 1. [Create function](https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/create/function)
-   * Function name: Name it whatever you like. In this example I simply call it "Camel"
-   * Runtime: "Amazon Linux 2023"
-   * Architecture: either one is fine. I use "amd64"
-   * Execution role: "Use an existing role" if you already have one, otherwise "Create a new role with basic Lambda permissions"
+   * Function name: Name it whatever you like. In this example I simply call it `Camel`
+   * Runtime: `Amazon Linux 2023`
+   * Architecture: Either one is fine. I use `amd64`
+   * Execution role: `Use an existing role` if you already have one, otherwise `Create a new role with basic Lambda permissions`
 2. [Add a layer](https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/add/layer?function=Camel)
-   * Provide a layer version ARN: "arn:aws:lambda:us-west-2:445285296882:layer:perl-5-40-runtime-al2023-arm64:2"
+   * Provide a layer version ARN: `arn:aws:lambda:us-west-2:445285296882:layer:perl-5-40-runtime-al2023-arm64:2`
+   * For other layers, please check: [AWS::Lambda::AL2023](https://metacpan.org/pod/AWS::Lambda::AL2023)
 3. [Code](https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/functions/Camel?tab=code)
    * Runtime settings
-      * Runtime: "Amazon Linux 2023"
-      * Handler: "handler.handle"
+      * Runtime: `Amazon Linux 2023`
+      * Handler: `handler.handle`
 
 Steps to expose Camel in AWS API Gateway
 1. [Create API](https://us-west-2.console.aws.amazon.com/apigateway/home?region=us-west-2#/apis/create)
-   * Choose the protocol: REST
+   * Choose the protocol: REST API
    * Create new API: New API
    * Settings:
-      * API name: Normally we name it based on the Lambda function, for example "Camel"
+      * API name: Normally we name it based on the Lambda function, for example `Camel`
       * Endpoint Type: Regional
 2. Actions > Create Method > Any > "V"
    * Integration type: Lambda function
@@ -73,8 +73,9 @@ Steps to expose Camel in AWS API Gateway
 # Client
 `ikq echo foo bar` will be serialized as `q=echo&p0=foo&p1=bar` and will run `perl echo.pl foo bar` on AWS Lambda
 
-# Author
-Yen-Ming Lee `leeym@leeym.com`
+# See Also
+* [AWS::Lambda](https://metacpan.org/pod/AWS::Lambda)
+* [AWS::XRay](https://metacpan.org/pod/AWS::XRay)
 
 # License
 ```
@@ -83,3 +84,6 @@ Yen-Ming Lee `leeym@leeym.com`
 can do whatever you want with this stuff. If we meet some day, and you think
 this stuff is worth it, you can buy me a pearl tea in return. Yen-Ming Lee
 ```
+
+# Author
+Yen-Ming Lee `leeym@leeym.com`
