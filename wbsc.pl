@@ -443,7 +443,7 @@ sub WARN
   my $msg = shift;
   if ($ENV{_X_AMZN_TRACE_ID})
   {
-    warn encode_json($msg);
+    warn encode_json($msg) . "\n";
   }
   else
   {
