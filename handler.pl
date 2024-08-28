@@ -99,8 +99,7 @@ sub discover
 {
   my %Q = @_;
   my @ARG;
-  $ENV{LANG} = 'C';
-  push(@ARG, '/opt/bin/perl');
+  push(@ARG, 'env LANG=C /opt/bin/perl');
   if (!$Q{q})
   {
     push(@ARG, 'help.pl');
