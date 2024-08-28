@@ -440,12 +440,13 @@ sub last_modified_event
 
 sub WARN
 {
-  if ($ENV{AWS_LAMBDA_RUNTIME_API})
+  my $msg = shift;
+  if ($ENV{_X_AMZN_TRACE_ID})
   {
-    warn encode_json(@_);
+    warn encode_json($msg);
   }
   else
   {
-    warn Dumper(@_);
+    warn Dumper($msg);
   }
 }
