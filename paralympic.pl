@@ -50,14 +50,15 @@ sub paralympic
       {
         next unless grep(m{^TPE$}, @{ $u->{nocs} });
 
-        # warn Dumper($u);
+        #warn Dumper($u);
         my $summary;
         $summary .= '[' . $u->{discipline}->{code} . '] ';
         $summary .= $u->{eventUnit}->{longDescription};
         my $dtstart = ical($u->{'startDate'});
 
-        # warn $u->{startDate} . ' ' . $summary . "\n";
+        warn $u->{startDate} . ' ' . $summary . "\n";
         my %LI;
+        $LI{Result} = result($u);
         my $description = unordered(%LI);
 
         my $vevent = Data::ICal::Entry::Event->new();
@@ -120,12 +121,24 @@ sub ical
   return $dst;
 }
 
-sub results
+sub result
 {
-  my $r = shift;
-  my $s = $r->{'mark'};
-  $s .= ' [' . $r->{'winnerLoserTie'} . ']' if $r->{'winnerLoserTie'};
-  return $s;
+  my $u    = shift;
+  my $code = lc($1) if $u->{code} =~ m{-----(.*?)$};
+  my $desc = lc($u->{eventUnit}->{phase}->{event}->{description});
+  $desc =~ s{\W}{-}g;
+  my %DISCIPLINE = (
+    'BDM' => 'para-badminton',
+    'ARC' => 'para-archery',
+    'TKW' => 'para-taekwondo'
+  );
+  my $discipline = $DISCIPLINE{ $u->{discipline}->{code} };
+  die $u->{discipline}->{code} if !$discipline;
+  my $url = build_url(
+    base_uri => 'https://www.paralympic.org',
+    path     => "/en/paris-2024-paralympics/results/$discipline/$desc/$code",
+  );
+  return $url;
 }
 
 sub dtstart
