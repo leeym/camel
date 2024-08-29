@@ -64,7 +64,7 @@ sub paralympic
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           uid             => $u->{code},
-          location        => $u->{venue}->{longDescription},
+          location        => $u->{location}->{longDescription},
           dtstart         => $dtstart,
           dtend           => ical($u->{'endDate'}),
           summary         => $summary,
