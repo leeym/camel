@@ -58,7 +58,11 @@ sub paralympic
 
         warn $u->{startDate} . ' ' . $summary . "\n";
         my %LI;
-        $LI{Result} = result($u);
+        for my $s (@{ $u->{start} })
+        {
+          next if $s->{participant}->{organisation}->{code} ne 'TPE';
+          $LI{ $s->{participant}->{name} } = result($u);
+        }
         my $description = unordered(%LI);
 
         my $vevent = Data::ICal::Entry::Event->new();
