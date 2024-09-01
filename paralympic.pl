@@ -22,10 +22,10 @@ use strict;
 
 AWS::XRay->auto_flush(0);
 
-my $start = time();
-my $now   = Date::ICal->new(epoch => $start)->ical;
-my $ics   = new Data::ICal;
-my $loop  = IO::Async::Loop->new();
+my $start   = time();
+my $dtstamp = Date::ICal->new(epoch   => $start)->ical;
+my $ics     = Data::ICal->new(calname => 'Paralympic Games');
+my $loop    = IO::Async::Loop->new();
 my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
@@ -67,13 +67,13 @@ sub paralympic
 
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
-          uid             => $u->{code},
-          location        => $u->{location}->{longDescription},
-          dtstart         => $dtstart,
-          dtend           => ical($u->{'endDate'}),
-          summary         => $summary,
-          description     => $description,
-          'last-modified' => $now,
+          uid         => $u->{code},
+          location    => $u->{location}->{longDescription},
+          dtstart     => $dtstart,
+          dtend       => ical($u->{'endDate'}),
+          summary     => $summary,
+          description => $description,
+          dtstamp     => $dtstamp,
         );
         $VEVENT{ $u->{code} } = $vevent;
       }
@@ -94,12 +94,12 @@ for my $vevent (sort by_dtstart values %VEVENT)
 }
 my $vevent = Data::ICal::Entry::Event->new();
 $vevent->add_properties(
-  dtstart         => Date::ICal->new(epoch => $start)->ical,
-  dtend           => Date::ICal->new(epoch => time)->ical,
-  summary         => 'Last Modified',
-  uid             => 'Last Modified',
-  description     => last_modified_description(),
-  'last-modified' => $now,
+  dtstart     => Date::ICal->new(epoch => $start)->ical,
+  dtend       => Date::ICal->new(epoch => time)->ical,
+  summary     => 'Last Modified',
+  uid         => 'Last Modified',
+  description => last_modified_description(),
+  dtstamp     => $dtstamp,
 );
 $ics->add_entry($vevent);
 print $ics->as_string;

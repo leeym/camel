@@ -22,10 +22,10 @@ $Data::Dumper::Sortkeys = 1;
 
 AWS::XRay->auto_flush(0);
 
-my $start = time();
-my $now   = Date::ICal->new(epoch => $start)->ical;
-my $loop  = new IO::Async::Loop;
-my $ics   = new Data::ICal;
+my $start   = time();
+my $dtstamp = Date::ICal->new(epoch => $start)->ical;
+my $loop    = new IO::Async::Loop;
+my $ics     = Data::ICal->new(calname => 'PONY');
 my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
@@ -126,9 +126,9 @@ sub teams
       my $response = shift;
       segment($response);
       my $html = $response->content;
-      my ($next, $name) = ($1, $2)
+      my ($href, $name) = ($1, $2)
         if $html =~ m{<a [^>]*href="([^"]+)">([^<]*Chinese Taipei)</a>};
-      my $id = $1 if $next =~ m{/teams/([^/]+)/};
+      my $id = $1 if $href =~ m{/teams/([^/]+)/};
       $name =~ s{Chinese Taipei}{Taiwan};
       return if !$id;
       my $next = "https://api.team-manager.gc.com/public/teams/$id/games";
@@ -162,7 +162,6 @@ sub team
         next if $VEVENT{ $g->{id} };
 
         #warn Dumper($g);
-        my $summary;
         my $home;
         my $away;
         my $score;
@@ -190,12 +189,12 @@ sub team
         my $description = unordered(%LI);
         my $vevent      = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
-          description     => $description,
-          dtstart         => Date::ICal->new(epoch => $start_ts + 1)->ical,
-          dtend           => Date::ICal->new(epoch => $end_ts)->ical,
-          'last-modified' => $now,
-          summary         => $summary,
-          uid             => $g->{id},
+          description => $description,
+          dtstart     => Date::ICal->new(epoch => $start_ts + 1)->ical,
+          dtend       => Date::ICal->new(epoch => $end_ts)->ical,
+          dtstamp     => $dtstamp,
+          summary     => $summary,
+          uid         => $g->{id},
         );
         $VEVENT{ $g->{id} } = $vevent;
       }
@@ -417,12 +416,12 @@ sub last_modified_event
 {
   my $vevent = Data::ICal::Entry::Event->new();
   $vevent->add_properties(
-    dtstart         => Date::ICal->new(epoch => $start)->ical,
-    dtend           => Date::ICal->new(epoch => time)->ical,
-    summary         => 'Last Modified',
-    uid             => 'Last Modified',
-    description     => last_modified_description(),
-    'last-modified' => $now,
+    dtstart     => Date::ICal->new(epoch => $start)->ical,
+    dtend       => Date::ICal->new(epoch => time)->ical,
+    summary     => 'Last Modified',
+    uid         => 'Last Modified',
+    description => last_modified_description(),
+    dtstamp     => $dtstamp,
   );
   return $vevent;
 }

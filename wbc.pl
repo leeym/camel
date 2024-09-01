@@ -22,11 +22,11 @@ $Data::Dumper::Sortkeys = 1;
 
 AWS::XRay->auto_flush(0);
 
-my $start = time();
-my $now   = Date::ICal->new(epoch => $start)->ical;
-my $loop  = new IO::Async::Loop;
-my $ics   = new Data::ICal;
-my @YEAR  = (2006, 2009, 2012, 2013, 2017, 2023, 2026);
+my $start   = time();
+my $dtstamp = Date::ICal->new(epoch => $start)->ical;
+my $loop    = new IO::Async::Loop;
+my $ics     = Data::ICal->new(calname => 'World Baseball Classic');
+my @YEAR    = (2006, 2009, 2012, 2013, 2017, 2023, 2026);
 my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
@@ -124,14 +124,14 @@ sub event
           my $desc   = unordered(%LI);
           my $vevent = Data::ICal::Entry::Event->new();
           $vevent->add_properties(
-            description     => $desc,
-            dtstart         => Date::ICal->new(epoch => $epoch + 1)->ical,
-            duration        => 'PT3H0M',
-            'last-modified' => $now,
-            location        => venue($g->{venue}),
-            summary         => $summary,
-            uid             => $g->{gamePk},
-            url             => $gameday,
+            description => $desc,
+            dtstart     => Date::ICal->new(epoch => $epoch + 1)->ical,
+            duration    => 'PT3H0M',
+            dtstamp     => $dtstamp,
+            location    => venue($g->{venue}),
+            summary     => $summary,
+            uid         => $g->{gamePk},
+            url         => $gameday,
           );
           $VEVENT{ $g->{gamePk} } = $vevent;
         }
@@ -343,12 +343,12 @@ sub last_modified_event
 {
   my $vevent = Data::ICal::Entry::Event->new();
   $vevent->add_properties(
-    dtstart         => Date::ICal->new(epoch => $start)->ical,
-    dtend           => Date::ICal->new(epoch => time)->ical,
-    summary         => 'Last Modified',
-    uid             => 'Last Modified',
-    description     => last_modified_description(),
-    'last-modified' => $now,
+    dtstart     => Date::ICal->new(epoch => $start)->ical,
+    dtend       => Date::ICal->new(epoch => time)->ical,
+    summary     => 'Last Modified',
+    uid         => 'Last Modified',
+    description => last_modified_description(),
+    dtstamp     => $dtstamp,
   );
   return $vevent;
 }

@@ -20,10 +20,10 @@ $Data::Dumper::Sortkeys = 1;
 
 AWS::XRay->auto_flush(0);
 
-my $start = time;
-my $now   = Date::ICal->new(epoch => $start)->ical;
-my $loop  = new IO::Async::Loop;
-my $ics   = new Data::ICal;
+my $start   = time;
+my $dtstamp = Date::ICal->new(epoch => $start)->ical;
+my $loop    = new IO::Async::Loop;
+my $ics = Data::ICal->new(calname => 'World Baseball Softball Confederation');
 my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
@@ -208,14 +208,14 @@ sub events
         my $desc   = unordered(%LI);
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
-          description     => $desc,
-          dtstart         => $dtstart,
-          duration        => $duration,
-          'last-modified' => $now,
-          location        => $g->{stadium} . ', ' . $g->{location},
-          summary         => $summary,
-          uid             => $g->{id},
-          url             => $boxscore,
+          description => $desc,
+          dtstart     => $dtstart,
+          duration    => $duration,
+          dtstamp     => $dtstamp,
+          location    => $g->{stadium} . ', ' . $g->{location},
+          summary     => $summary,
+          uid         => $g->{id},
+          url         => $boxscore,
         );
         $VEVENT{ $g->{id} } = $vevent;
         $LOGS{ $g->{id} }   = "$start ($ENV{TZ}) $summary";
@@ -428,12 +428,12 @@ sub last_modified_event
 {
   my $vevent = Data::ICal::Entry::Event->new();
   $vevent->add_properties(
-    dtstart         => Date::ICal->new(epoch => $start)->ical,
-    dtend           => Date::ICal->new(epoch => time)->ical,
-    summary         => 'Last Modified',
-    uid             => 'Last Modified',
-    description     => last_modified_description(),
-    'last-modified' => $now,
+    dtstart     => Date::ICal->new(epoch => $start)->ical,
+    dtend       => Date::ICal->new(epoch => time)->ical,
+    summary     => 'Last Modified',
+    uid         => 'Last Modified',
+    description => last_modified_description(),
+    dtstamp     => $dtstamp,
   );
   return $vevent;
 }
