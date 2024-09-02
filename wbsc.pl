@@ -191,12 +191,12 @@ sub events
           month => $month,
           day   => $day,
           hour  => $hour,
-          mon   => $min,
+          min   => $min,
           sec   => 1,
         )->ical;
         my $duration = $g->{duration} || duration($summary);
-        ($hour, $min) = split(/\D/, $duration);
-        $duration = 'PT' . int($hour) . 'H' . int($min) . 'M';
+        my ($HH, $MM) = split(/\D/, $duration);
+        $duration = 'PT' . int($HH) . 'H' . int($MM) . 'M';
         my $standings = $url;
         $standings =~ s,schedule-and-results,standings,;
         my $boxscore = boxscore($url, $g);
