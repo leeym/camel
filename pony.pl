@@ -177,10 +177,10 @@ sub team
           $away  = $name;
           $score = $g->{score}->{team} . ':' . $g->{score}->{opponent_team};
         }
-        $score = 'vs' if $score eq '0:0';
         my $summary  = "$away $score $home | $title";
         my $start_ts = str2time($g->{start_ts});
         my $end_ts   = str2time($g->{end_ts});
+        $score = 'vs' if $start_ts > time;
 
         warn $g->{start_ts} . " $summary\n";
         my %LI;

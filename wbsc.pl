@@ -171,13 +171,8 @@ sub events
         next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
         $ENV{TZ} = tz($g, $t);
         my $score = "$g->{awayruns}:$g->{homeruns}";
-        $score = 'vs' if $score eq '0:0';
-        my $away    = "$g->{awaylabel}";
-        my $home    = "$g->{homelabel}";
-        my $summary = "$away $score $home";
-        $summary .= " | $t->{tournamentname}";
-        $summary .= " - $g->{gametypelabel}";
-        $summary =~ s{Chinese Taipei}{Taiwan};
+        my $away  = "$g->{awaylabel}";
+        my $home  = "$g->{homelabel}";
         my $start = $g->{start};
 
         if ($g->{gamestart})
@@ -193,7 +188,13 @@ sub events
           hour  => $hour,
           min   => $min,
           sec   => 1,
-        )->ical;
+        );
+        $score = 'vs' if $dtstart->epoch > time;
+        my $summary = "$away $score $home";
+        $summary .= " | $t->{tournamentname}";
+        $summary .= " - $g->{gametypelabel}";
+        $summary =~ s{Chinese Taipei}{Taiwan};
+
         my $duration = $g->{duration} || duration($summary);
         my ($HH, $MM) = split(/\D/, $duration);
         $duration = 'PT' . int($HH) . 'H' . int($MM) . 'M';
@@ -209,7 +210,7 @@ sub events
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           description => $desc,
-          dtstart     => $dtstart,
+          dtstart     => $dtstart->ical,
           duration    => $duration,
           dtstamp     => $dtstamp,
           location    => $g->{stadium} . ', ' . $g->{location},
