@@ -233,6 +233,7 @@ sub http
     max_connections_per_host => 0,
     max_in_flight            => 0,
     timeout                  => $start + 28 - time,
+    user_agent => 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)',
   );
   $loop->add($http);
   return $http;
