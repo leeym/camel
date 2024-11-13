@@ -26,7 +26,7 @@ my $start   = time();
 my $dtstamp = Date::ICal->new(epoch => $start)->ical;
 my $loop    = new IO::Async::Loop;
 my $ics     = Data::ICal->new(calname => 'World Baseball Classic');
-my @YEAR    = (2006, 2009, 2012, 2013, 2017, 2023, 2026);
+my @YEAR    = (2006, 2009, 2012, 2013, 2017, 2023, 2025, 2026);
 my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
