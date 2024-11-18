@@ -168,7 +168,11 @@ sub events
       for my $g (@{ $d->{props}->{games} })
       {
         next if $VEVENT{ $g->{id} };
-        next if $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
+        next
+          if $g->{homeioc}
+          && $g->{homeioc} ne 'TPE'
+          && $g->{awayioc}
+          && $g->{awayioc} ne 'TPE';
         $ENV{TZ} = tz($g, $t);
         my $score = "$g->{awayruns}:$g->{homeruns}";
         my $away  = "$g->{awaylabel}";
