@@ -75,11 +75,20 @@ sub by_dtstart
   return dtstart($a) cmp dtstart($b);
 }
 
+sub _tz
+{
+  my $tz = shift;
+  return $tz          if $tz =~ m{^\w+/\w+$};
+  return 'Asia/Tokyo' if $tz eq 'Japan';
+  warn "Unknown timezone: $tz";
+  return $tz;
+}
+
 sub tz
 {
   my $g = shift;
   my $t = shift;
-  return $g->{start_tz} if $g->{start_tz};
+  return _tz($g->{start_tz}) if $g->{start_tz};
   my $country = '';
   $country = $1 if ($g->{location} =~ m{\(([A-Z]{3})\)});
   for my $venue (@{ $t->{venues} })
