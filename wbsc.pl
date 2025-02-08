@@ -174,14 +174,12 @@ sub events
       my $t = $d->{props}->{tournament};
 
       my %LOGS;
+      my $TPE = 0;
       for my $g (@{ $d->{props}->{games} })
       {
-        next if $VEVENT{ $g->{id} };
-        next
-          if $g->{homeioc}
-          && $g->{homeioc} ne 'TPE'
-          && $g->{awayioc}
-          && $g->{awayioc} ne 'TPE';
+        next   if $VEVENT{ $g->{id} };
+        $TPE++ if $g->{homeioc} eq 'TPE' or $g->{awayioc} eq 'TPE';
+        next   if !$TPE && $g->{homeioc} ne 'TPE' && $g->{awayioc} ne 'TPE';
         $ENV{TZ} = tz($g, $t);
         my $score = "$g->{awayruns}:$g->{homeruns}";
         my $away  = "$g->{awaylabel}";
