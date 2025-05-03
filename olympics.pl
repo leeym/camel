@@ -40,7 +40,7 @@ my $url = build_url(
   path     => '/summer/schedules/api/ENG/schedule/noc/TPE',
 );
 
-captured($ENV{_X_AMZN_TRACE_ID}, $url, sub { olympics($url) });
+# captured($ENV{_X_AMZN_TRACE_ID}, $url, sub { olympics($url) });
 
 sub olympics
 {
