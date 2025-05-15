@@ -157,6 +157,13 @@ sub calendar
   push(@FUTURE, $future);
 }
 
+sub stadium
+{
+  my $str = shift;
+  $str =~ s,ASPAC,Asia-Pacific International Baseball Training Centers -,;
+  return $str;
+}
+
 sub events
 {
   my $url    = shift;
@@ -222,7 +229,7 @@ sub events
           dtstart     => $dtstart->ical,
           duration    => $duration,
           dtstamp     => $dtstamp,
-          location    => $g->{stadium} . ', ' . $g->{location},
+          location    => stadium($g->{stadium}) . ', ' . $g->{location},
           summary     => $summary,
           uid         => $g->{id},
           url         => $boxscore,
