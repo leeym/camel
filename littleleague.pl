@@ -53,7 +53,7 @@ my %LOCATION = (
 
 for my $year (reverse sort @YEAR)
 {
-  my @TYPE = qw(llbws jlbws);
+  my @TYPE = qw(llbws jlbws 5070);
   for my $type (@TYPE)
   {
     my $url = build_url(

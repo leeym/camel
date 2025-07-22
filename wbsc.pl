@@ -133,8 +133,8 @@ sub yyyy
 sub duration
 {
   my $summary = shift;
-  return '1:10' if $summary =~ m{U-12};
-  return '2:00' if $summary =~ m{U-15};
+  return '2:00' if $summary =~ m{U-12};
+  return '2:30' if $summary =~ m{U-15};
   return '3:00';
 }
 
