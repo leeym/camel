@@ -127,8 +127,8 @@ sub teams
       segment($response);
       my $html = $response->content;
       my ($href, $name) = ($1, $2)
-        if $html =~ m{<a [^>]*href="([^"]+)">([^<]*Chinese Taipei)</a>};
-      my $id = $1 if $href =~ m{/teams/([^/]+)/};
+        if $html =~ m{<a href="([^"]+)">([^<]*(?:Chinese Taipei|Taiwan))</a>};
+      my $id = $1 if $href =~ m{/teams/([^/]+)};
       $name =~ s{Chinese Taipei}{Taiwan};
       return if !$id;
       my $next = "https://api.team-manager.gc.com/public/teams/$id/games";
