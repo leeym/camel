@@ -36,6 +36,25 @@ my $url = build_url(
 
 captured($ENV{_X_AMZN_TRACE_ID}, $url, sub { roadtrip($url) });
 
+my %offset = (
+  'Seattle'                => '-0700',
+  'Los Angeles'            => '-0700',
+  'San Francisco Bay Area' => '-0700',
+  'Dallas'                 => '-0500',
+  'Houston'                => '-0500',
+  'Kansas City'            => '-0500',
+  'Atlanta'                => '-0400',
+  'Boston'                 => '-0400',
+  'New York/New Jersey'    => '-0400',
+  'Philadelphia'           => '-0400',
+  'Miami'                  => '-0400',
+  'Vancouver'              => '-0700',
+  'Toronto'                => '-0400',
+  'Monterrey'              => '-0600',
+  'Guadalajara'            => '-0600',
+  'Mexico City'            => '-0600',
+);
+
 my %month = (
   Jan => '01',
   Feb => '02',
@@ -99,7 +118,7 @@ sub roadtrip
               day    => $dd,
               hour   => 12,
               min    => 30,
-              offset => $offset{$city}
+              offset => $offset{$city},
             )->ical,
             duration    => 'P3H',
             summary     => $summary,
@@ -353,21 +372,3 @@ sub capture
   return $wantarray ? @ret : $ret[0];
 }
 
-my %offset = (
-  'Seattle'                => '-0700',
-  'Los Angeles'            => '-0700',
-  'San Francisco Bay Area' => '-0700',
-  'Dallas'                 => '-0500',
-  'Houston'                => '-0500',
-  'Kansas City'            => '-0500',
-  'Atlanta'                => '-0400',
-  'Boston'                 => '-0400',
-  'New York/New Jersey'    => '-0400',
-  'Philadelphia'           => '-0400',
-  'Miami'                  => '-0400',
-  'Vancouver'              => '-0700',
-  'Toronto'                => '-0400',
-  'Monterrey'              => '-0600',
-  'Guadalajara'            => '-0600',
-  'Mexico City'            => '-0600',
-);
