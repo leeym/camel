@@ -6,7 +6,6 @@ use Data::ICal::Entry::Event;
 use Data::ICal;
 use Date::ICal;
 use Date::Parse;
-use DateTime;
 use IO::Socket::SSL;
 use JSON::XS qw(decode_json);
 use Net::Async::HTTP;
@@ -64,8 +63,7 @@ sub roadtrip
           my @TD   = ($tr =~ m{<td>([^<]*)</td>}g);
           my $date = $TD[0];
           next if !$date;
-          my $epoch   = str2time($date);
-          my $dtstart = DateTime->from_epoch(epoch => $epoch);
+          my $dtstart = parse_date_to_ymd($date);
           my $match   = $TD[1];
           my $venue   = $TD[2];
           my $city    = $TD[3];
@@ -78,7 +76,7 @@ sub roadtrip
           $vevent->add_properties(
             uid         => $match,
             location    => "$venue, $city",
-            dtstart     => $dtstart->strftime('%Y%m%d'),
+            dtstart     => $dtstart,
             duration    => 'P1D',
             summary     => $summary,
             description => $description,
@@ -349,4 +347,28 @@ sub capture
   }
   die $error if $error;
   return $wantarray ? @ret : $ret[0];
+}
+
+sub parse_date_to_ymd
+{
+  my $date  = shift;
+  my %month = (
+    Jan => '01',
+    Feb => '02',
+    Mar => '03',
+    Apr => '04',
+    May => '05',
+    Jun => '06',
+    Jul => '07',
+    Aug => '08',
+    Sep => '09',
+    Oct => '10',
+    Nov => '11',
+    Dec => '12'
+  );
+  my ($day, $mon, $year) = split /-/, $date;
+  die "Invalid $date" unless exists $month{$mon};
+  $day = sprintf("%02d", $day);
+  $year += ($year < 70) ? 2000 : 1900;
+  return $year . $month{$mon} . $day;
 }
