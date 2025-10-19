@@ -36,6 +36,21 @@ my $url = build_url(
 
 captured($ENV{_X_AMZN_TRACE_ID}, $url, sub { roadtrip($url) });
 
+my %month = (
+  Jan => '01',
+  Feb => '02',
+  Mar => '03',
+  Apr => '04',
+  May => '05',
+  Jun => '06',
+  Jul => '07',
+  Aug => '08',
+  Sep => '09',
+  Oct => '10',
+  Nov => '11',
+  Dec => '12'
+);
+
 sub roadtrip
 {
   my $url    = shift;
@@ -63,21 +78,30 @@ sub roadtrip
           my @TD   = ($tr =~ m{<td>([^<]*)</td>}g);
           my $date = $TD[0];
           next if !$date;
-          my $dtstart = parse_date_to_ymd($date);
-          my $match   = $TD[1];
-          my $venue   = $TD[2];
-          my $city    = $TD[3];
-          my $teams   = $TD[4];
+          my $epoch = str2time($date);
+          my ($dd, $mon) = ($1, $2) if $date =~ m{(\d+)-(\w+)};
+          my $mm    = $month{$mon};
+          my $match = $TD[1];
+          my $venue = $TD[2];
+          my $city  = $TD[3];
+          my $teams = $TD[4];
 
           my $summary     = "M$match $teams";
           my $description = "M$match $venue, $city";
 
           my $vevent = Data::ICal::Entry::Event->new();
           $vevent->add_properties(
-            uid         => $match,
-            location    => "$venue, $city",
-            dtstart     => $dtstart,
-            duration    => 'P1D',
+            uid      => $match,
+            location => "$venue, $city",
+            dtstart  => Date::ICal->new(
+              year   => 2026,
+              month  => $mm,
+              day    => $dd,
+              hour   => 12,
+              min    => 30,
+              offset => $offset{$city}
+            )->ical,
+            duration    => 'P3H',
             summary     => $summary,
             description => $description,
             dtstamp     => $dtstamp,
@@ -110,9 +134,7 @@ $vevent->add_properties(
   dtstamp     => $dtstamp,
 );
 $ics->add_entry($vevent);
-my $str = $ics->as_string;
-$str =~ s{DTSTART}{DTSTART;VALUE=DATE}g;
-print $str;
+print $ics->as_string;
 
 END
 {
@@ -120,24 +142,6 @@ END
   die $@ if $@;
   warn "Total: " . scalar(keys %VEVENT) . " events\n";
   warn "Duration: " . int((time - $start) * 1000) . " ms\n";
-}
-
-sub ical
-{
-  # 2024-07-25T09:30:00+02:00
-  my $str   = shift;
-  my @field = split(/\+/, $str);
-  (my $ical   = $field[0]) =~ s{\W}{}g;
-  (my $offset = $field[1]) =~ s{\W}{}g;
-  return Date::ICal->new(ical => $ical, offset => '+' . $offset)->ical;
-}
-
-sub results
-{
-  my $r = shift;
-  my $s = $r->{'mark'};
-  $s .= ' [' . $r->{'winnerLoserTie'} . ']' if $r->{'winnerLoserTie'};
-  return $s;
 }
 
 sub dtstart
@@ -349,26 +353,21 @@ sub capture
   return $wantarray ? @ret : $ret[0];
 }
 
-sub parse_date_to_ymd
-{
-  my $date  = shift;
-  my %month = (
-    Jan => '01',
-    Feb => '02',
-    Mar => '03',
-    Apr => '04',
-    May => '05',
-    Jun => '06',
-    Jul => '07',
-    Aug => '08',
-    Sep => '09',
-    Oct => '10',
-    Nov => '11',
-    Dec => '12'
-  );
-  my ($day, $mon, $year) = split /-/, $date;
-  die "Invalid $date" unless exists $month{$mon};
-  $day = sprintf("%02d", $day);
-  $year += ($year < 70) ? 2000 : 1900;
-  return $year . $month{$mon} . $day;
-}
+my %offset = (
+  'Seattle'                => '-0700',
+  'Los Angeles'            => '-0700',
+  'San Francisco Bay Area' => '-0700',
+  'Dallas'                 => '-0500',
+  'Houston'                => '-0500',
+  'Kansas City'            => '-0500',
+  'Atlanta'                => '-0400',
+  'Boston'                 => '-0400',
+  'New York/New Jersey'    => '-0400',
+  'Philadelphia'           => '-0400',
+  'Miami'                  => '-0400',
+  'Vancouver'              => '-0700',
+  'Toronto'                => '-0400',
+  'Monterrey'              => '-0600',
+  'Guadalajara'            => '-0600',
+  'Mexico City'            => '-0600',
+);
