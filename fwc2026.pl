@@ -1,5 +1,6 @@
 #!/opt/bin/perl
 use lib 'local/lib/perl5';
+use warnings;
 use AWS::XRay;
 use Data::Dumper;
 use Data::ICal::Entry::Event;
@@ -30,11 +31,11 @@ my %VEVENT;
 my @FUTURE;
 
 my $url = build_url(
-  base_uri => 'https://www.roadtrips.com/',
-  path     => '/world-cup/2026-world-cup-packages/schedule/',
+  base_uri => 'https://api.fifa.com/',
+  path     => '/api/v3/calendar/matches?language=en&count=500&idSeason=285023',
 );
 
-captured($ENV{_X_AMZN_TRACE_ID}, $url, sub { roadtrip($url) });
+captured($ENV{_X_AMZN_TRACE_ID}, $url, sub { fifa($url) });
 
 my %offset = (
   'Seattle'                => '-0700',
@@ -55,78 +56,65 @@ my %offset = (
   'Mexico City'            => '-0600',
 );
 
-my %month = (
-  Jan => '01',
-  Feb => '02',
-  Mar => '03',
-  Apr => '04',
-  May => '05',
-  Jun => '06',
-  Jul => '07',
-  Aug => '08',
-  Sep => '09',
-  Oct => '10',
-  Nov => '11',
-  Dec => '12'
-);
-
-sub roadtrip
+sub fifa
 {
   my $url    = shift;
   my $future = http()->GET($url)->on_done(
     sub {
       my $response = shift;
       segment($response);
-      my $html = $response->content;
-      for my $line (split(/\n/, $html))
+      my $json = $response->content;
+      die if !$json;
+      my $hash = decode_json($json);
+      for my $r (@{ $hash->{Results} })
       {
-        my $table = $1 if $line =~ m{(<table.*</table>)};
-        next           if !$table;
-        while ($table =~ m{(<tr.*?></tr>)})
-        {
-          my $tr = $1;
-          $table = $';
-          next if $tr !~ m{<td};
+        my $city = $r->{Stadium}->{CityName}->[0]->{Description};
+        my $date = $r->{LocalDate};
+        my ($yyyy, $mm, $dd, $HH, $MM, $SS) =
+          $date =~ /(\d+)-(\d+)-(\d+)T(\d+):(\d+):(\d+)Z/;
+        my $dtstart = Date::ICal->new(
+          year   => $yyyy,
+          month  => $mm,
+          day    => $dd,
+          hour   => $HH,
+          min    => $MM,
+          sec    => $SS,
+          offset => $offset{$city},
+        )->ical;
+        my $match   = $r->{MatchNumber};
+        my $stadium = $r->{Stadium}->{Name}->[0]->{Description};
+        my $home    = '[' . $r->{PlaceHolderA} . ']';
+        $home .= ' ' . $r->{Home}->{ShortClubName}
+          if $r->{Home}->{ShortClubName};
+        my $away = '[' . $r->{PlaceHolderB} . ']';
+        $away .= ' ' . $r->{Away}->{ShortClubName}
+          if $r->{Away}->{ShortClubName};
+        my $stage = $r->{StageName}->[0]->{Description};
+        my $group = $r->{GroupName}->[0]->{Description};
+        $group = '' if !$group;
+        my $homescore = $r->{Home}->{Score};
+        my $awayscore = $r->{Away}->{Score};
+        my $vs        = 'vs';
+        $vs = sprintf("%d:%d", $homescore, $awayscore)
+          if ($homescore or $awayscore);
+        my $summary     = "M$match - $home $vs $away";
+        my $description = $stage;
+        $description .= " - $group" if $group;
+        $description .= " - $stadium ($city)";
 
-          $tr =~ s{ class="column-\d+"}{}g;
-          $tr =~ s{<a [^>]*>}{}g;
-          $tr =~ s{</a>}{}g;
+        my $vevent = Data::ICal::Entry::Event->new();
+        $vevent->add_properties(
+          uid         => $match,
+          location    => "$stadium, $city",
+          dtstart     => $dtstart,
+          duration    => 'P3H',
+          summary     => $summary,
+          description => $description,
+          dtstamp     => $dtstamp,
+        );
+        $VEVENT{$match} = $vevent;
 
-          #$tr =~ s{&amp;}{&}g;
-
-          my @TD   = ($tr =~ m{<td>([^<]*)</td>}g);
-          my $date = $TD[0];
-          next if !$date;
-          my $epoch = str2time($date);
-          my ($dd, $mon) = ($1, $2) if $date =~ m{(\d+)-(\w+)};
-          my $mm    = $month{$mon};
-          my $match = $TD[1];
-          my $venue = $TD[2];
-          my $city  = $TD[3];
-          my $teams = $TD[4];
-
-          my $summary     = "M$match $teams";
-          my $description = "M$match $venue, $city";
-
-          my $vevent = Data::ICal::Entry::Event->new();
-          $vevent->add_properties(
-            uid      => $match,
-            location => "$venue, $city",
-            dtstart  => Date::ICal->new(
-              year   => 2026,
-              month  => $mm,
-              day    => $dd,
-              hour   => 12,
-              min    => 30,
-              offset => $offset{$city},
-            )->ical,
-            duration    => 'P3H',
-            summary     => $summary,
-            description => $description,
-            dtstamp     => $dtstamp,
-          );
-          $VEVENT{$match} = $vevent;
-        }
+        #print Dumper($r);
       }
     }
   );
