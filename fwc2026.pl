@@ -86,14 +86,16 @@ sub fifa
           min    => $MM,
           sec    => $SS,
           offset => $offset{$city},
-        )->ical;
+        );
         my $match = $r->{MatchNumber};
         my $venue = firstDesc($r->{Stadium}->{Name});
-        my $home  = firstDesc($r->{Home}->{TeamName}) || $r->{PlaceHolderA};
-        my $away  = firstDesc($r->{Away}->{TeamName}) || $r->{PlaceHolderB};
+        my $Home  = $r->{Home};
+        my $Away  = $r->{Home};
+        my $home  = firstDesc($Home->{TeamName}) || $r->{PlaceHolderA};
+        my $away  = firstDesc($Away->{TeamName}) || $r->{PlaceHolderB};
         my $stage = firstDesc($r->{StageName});
         my $group = firstDesc($r->{GroupName});
-        my $score = sprintf("%d:%d", $r->{Home}->{Score}, $r->{Away}->{Score});
+        my $score = ($Home->{Score} || 0) . ':' . ($Away->{Score} || 0);
         $score = 'vs' if $dtstart->epoch > time;
         my $summary     = "M$match - $home $score $away";
         my $description = $stage;
@@ -104,7 +106,7 @@ sub fifa
         $vevent->add_properties(
           uid         => $match,
           location    => "$venue, $city",
-          dtstart     => $dtstart,
+          dtstart     => $dtstart->ical,
           duration    => 'P3H',
           summary     => $summary,
           description => $description,
