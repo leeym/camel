@@ -56,6 +56,12 @@ my %offset = (
   'Mexico City'            => '-0600',
 );
 
+sub firstDesc
+{
+  my $ref = shift;
+  return $ref->[0]->{Description} || '';
+}
+
 sub fifa
 {
   my $url    = shift;
@@ -68,7 +74,7 @@ sub fifa
       my $hash = decode_json($json);
       for my $r (@{ $hash->{Results} })
       {
-        my $city = $r->{Stadium}->{CityName}->[0]->{Description};
+        my $city = firstDesc($r->{Stadium}->{CityName});
         my $date = $r->{LocalDate};
         my ($yyyy, $mm, $dd, $HH, $MM, $SS) =
           $date =~ /(\d+)-(\d+)-(\d+)T(\d+):(\d+):(\d+)Z/;
@@ -81,31 +87,23 @@ sub fifa
           sec    => $SS,
           offset => $offset{$city},
         )->ical;
-        my $match   = $r->{MatchNumber};
-        my $stadium = $r->{Stadium}->{Name}->[0]->{Description};
-        my $home    = '[' . $r->{PlaceHolderA} . ']';
-        $home .= ' ' . $r->{Home}->{ShortClubName}
-          if $r->{Home}->{ShortClubName};
-        my $away = '[' . $r->{PlaceHolderB} . ']';
-        $away .= ' ' . $r->{Away}->{ShortClubName}
-          if $r->{Away}->{ShortClubName};
-        my $stage = $r->{StageName}->[0]->{Description};
-        my $group = $r->{GroupName}->[0]->{Description};
-        $group = '' if !$group;
-        my $homescore = $r->{Home}->{Score};
-        my $awayscore = $r->{Away}->{Score};
-        my $vs        = 'vs';
-        $vs = sprintf("%d:%d", $homescore, $awayscore)
-          if ($homescore or $awayscore);
-        my $summary     = "M$match - $home $vs $away";
+        my $match = $r->{MatchNumber};
+        my $venue = firstDesc($r->{Stadium}->{Name});
+        my $home  = firstDesc($r->{Home}->{TeamName}) || $r->{PlaceHolderA};
+        my $away  = firstDesc($r->{Away}->{TeamName}) || $r->{PlaceHolderB};
+        my $stage = firstDesc($r->{StageName});
+        my $group = firstDesc($r->{GroupName});
+        my $score = sprintf("%d:%d", $r->{Home}->{Score}, $r->{Away}->{Score});
+        $score = 'vs' if $dtstart->epoch > time;
+        my $summary     = "M$match - $home $score $away";
         my $description = $stage;
         $description .= " - $group" if $group;
-        $description .= " - $stadium ($city)";
+        $description .= " - $venue ($city)";
 
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           uid         => $match,
-          location    => "$stadium, $city",
+          location    => "$venue, $city",
           dtstart     => $dtstart,
           duration    => 'P3H',
           summary     => $summary,
