@@ -7,6 +7,7 @@ use Data::ICal::Entry::Event;
 use Data::ICal;
 use Date::ICal;
 use Date::Parse;
+use Encode qw(encode);
 use IO::Socket::SSL;
 use JSON::XS qw(decode_json);
 use Net::Async::HTTP;
@@ -16,7 +17,7 @@ use Time::HiRes qw(time sleep);
 use URL::Builder;
 use strict;
 use utf8;
-use open qw(:std :encoding(UTF-8));
+binmode STDOUT, ':raw';
 
 $Data::Dumper::Terse    = 1;    # don't output names where feasible
 $Data::Dumper::Indent   = 0;    # turn off all pretty print
@@ -150,7 +151,7 @@ $vevent->add_properties(
   dtstamp     => $dtstamp,
 );
 $ics->add_entry($vevent);
-print $ics->as_string;
+print encode('UTF-8', $ics->as_string);
 
 END
 {
