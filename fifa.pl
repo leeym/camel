@@ -25,7 +25,7 @@ $Data::Dumper::Sortkeys = 1;
 AWS::XRay->auto_flush(0);
 
 my $start   = time();
-my $dtstamp = Date::ICal->new(epoch   => $start)->ical;
+my $dtstamp = Date::ICal->new(epoch => $start)->ical;
 my $loop    = IO::Async::Loop->new();
 my %SEGMENT;
 my %VEVENT;
@@ -79,7 +79,7 @@ sub fifa
       my $hash = decode_json($json);
       for my $r (@{ $hash->{Results} })
       {
-	$calname = firstDesc($r->{SeasonName}) if !$calname;
+        $calname = firstDesc($r->{SeasonName}) if !$calname;
         my $city = firstDesc($r->{Stadium}->{CityName});
         my $date = $r->{LocalDate};
         my ($yyyy, $mm, $dd, $HH, $MM, $SS) =
@@ -97,7 +97,7 @@ sub fifa
         my $match = $r->{MatchNumber};
         my $venue = firstDesc($r->{Stadium}->{Name});
         my $Home  = $r->{Home};
-        my $Away  = $r->{Home};
+        my $Away  = $r->{Away};
         my $home  = firstDesc($Home->{TeamName}) || $r->{PlaceHolderA};
         my $away  = firstDesc($Away->{TeamName}) || $r->{PlaceHolderB};
         my $stage = firstDesc($r->{StageName});
@@ -134,7 +134,7 @@ for my $future (@FUTURE)
   await $future->get();
 }
 
-my $ics     = Data::ICal->new(calname => $calname);
+my $ics = Data::ICal->new(calname => $calname);
 
 for my $vevent (sort by_dtstart values %VEVENT)
 {

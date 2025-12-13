@@ -21,6 +21,7 @@ endif
 	git status --porcelain | grep ^\? | awk '{print $$NF}' | xargs git add
 	-git commit -am "`git status --porcelain | awk '{print $$NF}' | awk -F/ '{print $$1}' | sort -u | xargs`"
 	git push
+	grep Code README.md
 
 clean:
 	rm -rf \
