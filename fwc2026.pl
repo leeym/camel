@@ -107,7 +107,7 @@ sub fifa
           uid         => $match,
           location    => "$venue, $city",
           dtstart     => $dtstart->ical,
-          duration    => 'P3H',
+          duration    => 'PT2H0M',
           summary     => $summary,
           description => $description,
           dtstamp     => $dtstamp,
