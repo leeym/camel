@@ -84,7 +84,7 @@ my %location_info = (
   'Mexico City' => {
     offset => '-0600',
     name   => 'Mexico City, Mexico',
-    venue  => 'Banorte Stadium',
+    venue  => 'Estadio Banorte',
   },
   'Miami' => {
     offset => '-0400',
