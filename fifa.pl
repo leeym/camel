@@ -19,22 +19,24 @@ use strict;
 use utf8;
 binmode STDOUT, ':raw';
 
-$Data::Dumper::Terse    = 1;    # don't output names where feasible
-$Data::Dumper::Indent   = 0;    # turn off all pretty print
-$Data::Dumper::Sortkeys = 1;
+#$Data::Dumper::Terse    = 1;    # don't output names where feasible
+#$Data::Dumper::Indent   = 0;    # turn off all pretty print
+#$Data::Dumper::Sortkeys = 1;
 
 AWS::XRay->auto_flush(0);
 
 my $start   = time();
 my $dtstamp = Date::ICal->new(epoch => $start)->ical;
 my $loop    = IO::Async::Loop->new();
+my $calname;
 my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
 
 my $season = shift;
 $season = 285023 if !$season;
-my $calname;
+
+my $keyword = shift;
 
 my $url = build_url(
   base_uri => 'https://api.fifa.com/',
@@ -43,48 +45,100 @@ my $url = build_url(
 
 captured($ENV{_X_AMZN_TRACE_ID}, $url, sub { fifa($url) });
 
-my %offset = (
-  'Seattle'                => '-0700',
-  'Los Angeles'            => '-0700',
-  'San Francisco Bay Area' => '-0700',
-  'Dallas'                 => '-0500',
-  'Houston'                => '-0500',
-  'Kansas City'            => '-0500',
-  'Atlanta'                => '-0400',
-  'Boston'                 => '-0400',
-  'New York/New Jersey'    => '-0400',
-  'Philadelphia'           => '-0400',
-  'Miami'                  => '-0400',
-  'Vancouver'              => '-0700',
-  'Toronto'                => '-0400',
-  'Monterrey'              => '-0600',
-  'Guadalajara'            => '-0600',
-  'Mexico City'            => '-0600',
-);
-
-my %venue = (
-  'Atlanta Stadium'                => 'Mercedes-Benz Stadium',
-  'BC Place Vancouver'             => 'BC Place',
-  'Boston Stadium'                 => 'Gillette Stadium',
-  'Dallas Stadium'                 => 'AT&T Stadium',
-  'Guadalajara Stadium'            => 'Estadio Akron',
-  'Houston Stadium'                => 'NRG Stadium',
-  'Kansas City Stadium'            => 'Arrowhead Stadium',
-  'Los Angeles Stadium'            => 'SoFi Stadium',
-  'Mexico City Stadium'            => 'Estadio Azteca',
-  'Miami Stadium'                  => 'Hard Rock Stadium',
-  'Monterrey Stadium'              => 'Estadio BBVA',
-  'New York/New Jersey Stadium'    => 'MetLife Stadium',
-  'Philadelphia Stadium'           => 'Lincoln Financial Field',
-  'San Francisco Bay Area Stadium' => "Levi's Stadium",
-  'Seattle Stadium'                => 'Lumen Field',
-  'Toronto Stadium'                => 'BMO Field',
+my %location_info = (
+  'Atlanta' => {
+    offset => '-0400',
+    name   => 'Atlanta, GA',
+    venue  => 'Mercedes-Benz Stadium',
+  },
+  'Boston' => {
+    offset => '-0400',
+    name   => 'Foxborough, MA',
+    venue  => 'Gillette Stadium',
+  },
+  'Dallas' => {
+    offset => '-0500',
+    name   => 'Arlington, TX',
+    venue  => 'AT&T Stadium',
+  },
+  'Guadalajara' => {
+    offset => '-0600',
+    name   => 'Guadalajara, Mexico',
+    venue  => 'Estadio Akron',
+  },
+  'Houston' => {
+    offset => '-0500',
+    name   => 'Houston, TX',
+    venue  => 'NRG Stadium',
+  },
+  'Kansas City' => {
+    offset => '-0500',
+    name   => 'Kansas City, MO',
+    venue  => 'Arrowhead Stadium',
+  },
+  'Los Angeles' => {
+    offset => '-0700',
+    name   => 'Inglewood, CA',
+    venue  => 'SoFi Stadium',
+  },
+  'Mexico City' => {
+    offset => '-0600',
+    name   => 'Mexico City, Mexico',
+    venue  => 'Estadio Azteca',
+  },
+  'Miami' => {
+    offset => '-0400',
+    name   => 'Miami, FL',
+    venue  => 'Hard Rock Stadium',
+  },
+  'Monterrey' => {
+    offset => '-0600',
+    name   => 'Guadalupe, Mexico',
+    venue  => 'Estadio BBVA',
+  },
+  'New York' => {
+    offset => '-0400',
+    name   => 'East Rutherford, NJ',
+    venue  => 'MetLife Stadium',
+  },
+  'Philadelphia' => {
+    offset => '-0400',
+    name   => 'Philadelphia, PA',
+    venue  => 'Lincoln Financial Field',
+  },
+  'San Francisco Bay Area' => {
+    offset => '-0700',
+    name   => 'Santa Clara, CA',
+    venue  => "Levi's Stadium",
+  },
+  'Seattle' => {
+    offset => '-0700',
+    name   => 'Seattle, WA',
+    venue  => 'Lumen Field',
+  },
+  'Toronto' => {
+    offset => '-0400',
+    name   => 'Toronto, ON',
+    venue  => 'BMO Field',
+  },
+  'Vancouver' => {
+    offset => '-0700',
+    name   => 'Vancouver, BC',
+    venue  => 'BC Place',
+  },
 );
 
 sub venue
 {
   my $name = shift;
-  return $venue{$name} || $name;
+  return $location_info{$name}->{venue} || $name;
+}
+
+sub city
+{
+  my $name = shift;
+  die $name if !$location_info{$name}->{name};
+  return $location_info{$name}->{name} || $name;
 }
 
 sub firstDesc
@@ -117,11 +171,11 @@ sub fifa
           hour   => $HH,
           min    => $MM,
           sec    => $SS,
-          offset => $offset{$city},
+          offset => $location_info{$city}->{offset},
         );
         my $id    = $r->{IdMatch};
         my $match = $r->{MatchNumber};
-        my $venue = venue(firstDesc($r->{Stadium}->{Name}));
+        my $venue = firstDesc($r->{Stadium}->{Name});
         my $Home  = $r->{Home};
         my $Away  = $r->{Away};
         my $home  = firstDesc($Home->{TeamName}) || $r->{PlaceHolderA};
@@ -133,12 +187,16 @@ sub fifa
         my $summary     = "M$match: $home $score $away";
         my $description = $stage;
         $description .= " - $group" if $group;
-        $description .= " - $venue";
+        $description .= " - $venue ($city)";
+        my $location = venue($city) . ", " . city($city);
+
+        my $text = "$venue $city $location $home $away";
+        next if $keyword && $text !~ m{$keyword}i;
 
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           uid         => $id,
-          location    => $venue,
+          location    => $location,
           dtstart     => $dtstart->ical,
           duration    => 'PT2H0M',
           summary     => $summary,
@@ -146,8 +204,7 @@ sub fifa
           dtstamp     => $dtstamp,
         );
         $VEVENT{$match} = $vevent;
-
-        #print Dumper($r);
+        warn Dumper($r);
       }
     }
   );
