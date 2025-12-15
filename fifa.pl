@@ -62,6 +62,31 @@ my %offset = (
   'Mexico City'            => '-0600',
 );
 
+my %venue = (
+  'Atlanta Stadium'                => 'Mercedes-Benz Stadium',
+  'BC Place Vancouver'             => 'BC Place',
+  'Boston Stadium'                 => 'Gillette Stadium',
+  'Dallas Stadium'                 => 'AT&T Stadium',
+  'Guadalajara Stadium'            => 'Estadio Akron',
+  'Houston Stadium'                => 'NRG Stadium',
+  'Kansas City Stadium'            => 'Arrowhead Stadium',
+  'Los Angeles Stadium'            => 'SoFi Stadium',
+  'Mexico City Stadium'            => 'Estadio Azteca',
+  'Miami Stadium'                  => 'Hard Rock Stadium',
+  'Monterrey Stadium'              => 'Estadio BBVA',
+  'New York/New Jersey Stadium'    => 'MetLife Stadium',
+  'Philadelphia Stadium'           => 'Lincoln Financial Field',
+  'San Francisco Bay Area Stadium' => "Levi's Stadium",
+  'Seattle Stadium'                => 'Lumen Field',
+  'Toronto Stadium'                => 'BMO Field',
+);
+
+sub venue
+{
+  my $name = shift;
+  return $venue{$name} || $name;
+}
+
 sub firstDesc
 {
   my $ref = shift;
@@ -96,7 +121,7 @@ sub fifa
         );
         my $id    = $r->{IdMatch};
         my $match = $r->{MatchNumber};
-        my $venue = firstDesc($r->{Stadium}->{Name});
+        my $venue = venue(firstDesc($r->{Stadium}->{Name}));
         my $Home  = $r->{Home};
         my $Away  = $r->{Away};
         my $home  = firstDesc($Home->{TeamName}) || $r->{PlaceHolderA};
@@ -108,12 +133,12 @@ sub fifa
         my $summary     = "M$match: $home $score $away";
         my $description = $stage;
         $description .= " - $group" if $group;
-        $description .= " - $venue ($city)";
+        $description .= " - $venue";
 
         my $vevent = Data::ICal::Entry::Event->new();
         $vevent->add_properties(
           uid         => $id,
-          location    => "$venue, $city",
+          location    => $venue,
           dtstart     => $dtstart->ical,
           duration    => 'PT2H0M',
           summary     => $summary,
