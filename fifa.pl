@@ -19,9 +19,9 @@ use strict;
 use utf8;
 binmode STDOUT, ':raw';
 
-#$Data::Dumper::Terse    = 1;    # don't output names where feasible
-#$Data::Dumper::Indent   = 0;    # turn off all pretty print
-#$Data::Dumper::Sortkeys = 1;
+$Data::Dumper::Terse    = 1;    # don't output names where feasible
+$Data::Dumper::Indent   = 0;    # turn off all pretty print
+$Data::Dumper::Sortkeys = 1;
 
 AWS::XRay->auto_flush(0);
 
@@ -84,7 +84,7 @@ my %location_info = (
   'Mexico City' => {
     offset => '-0600',
     name   => 'Mexico City, Mexico',
-    venue  => 'Estadio Azteca',
+    venue  => 'Banorte Stadium',
   },
   'Miami' => {
     offset => '-0400',
@@ -204,7 +204,8 @@ sub fifa
           dtstamp     => $dtstamp,
         );
         $VEVENT{$match} = $vevent;
-        warn Dumper($r);
+
+        #warn Dumper($r);
       }
     }
   );
