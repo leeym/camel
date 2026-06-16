@@ -210,7 +210,8 @@ sub fifa
         );
         $VEVENT{$match} = $vevent;
 
-        #warn Dumper($r);
+        warn Dumper($r);
+        exit;
       }
     }
   );
