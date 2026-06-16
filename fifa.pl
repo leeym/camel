@@ -1,4 +1,5 @@
 #!/opt/bin/perl
+BEGIN { $ENV{OBJC_DISABLE_INITIALIZE_FORK_SAFETY} = 'YES' }
 use lib 'local/lib/perl5';
 use warnings;
 use AWS::XRay;
@@ -96,7 +97,7 @@ my %location_info = (
     name   => 'Guadalupe, Mexico',
     venue  => 'Estadio BBVA',
   },
-  'New York' => {
+  'New Jersey' => {
     offset => '-0400',
     name   => 'East Rutherford, NJ',
     venue  => 'MetLife Stadium',
