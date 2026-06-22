@@ -14,7 +14,7 @@ sub handle
 
   my %JSON;
   $JSON{isBase64Encoded}         = \0;
-  $JSON{headers}{'Content-Type'} = 'text/plain';
+  $JSON{headers}{'Content-Type'} = 'text/plain; charset=utf-8';
 
   eval {
     # parse payload and return query hash
