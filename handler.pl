@@ -1,5 +1,6 @@
 use Capture::Tiny ':all';
 use Data::Dumper;
+use Encode qw(decode);
 
 $Data::Dumper::Terse    = 1;    # don't output names where feasible
 $Data::Dumper::Indent   = 0;    # turn off all pretty print
@@ -40,6 +41,10 @@ sub handle
     # execute command and return result
     warn "COMMAND: $cmd\n";
     my ($stdout, $stderr, $exit) = capture { system($cmd); };
+    # Scripts emit UTF-8 octets; decode to characters so the runtime's
+    # encode_json (UTF-8 mode) doesn't double-encode the response body.
+    $stdout = decode('UTF-8', $stdout);
+    $stderr = decode('UTF-8', $stderr);
     if ($exit)
     {
       $JSON{statusCode} = 500;       # HTTP_INTERNAL_SERVER_ERROR
