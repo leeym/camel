@@ -36,6 +36,7 @@ my @FUTURE;
 
 my $season = shift;
 $season = 285023 if !$season;
+my $standing = 'https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/standings';
 
 my $keyword = shift;
 
@@ -188,11 +189,11 @@ sub fifa
         my $summary     = "M$match: $home $score $away";
         my $description = $stage;
         $description .= " - $group" if $group;
-        $description .= " - $venue ($city)";
         my $href =
           sprintf('https://www.fifa.com/en/match-centre/match/17/%d/%d/%d',
           $r->{IdSeason}, $r->{IdStage}, $r->{IdMatch});
         $description .= "\n" . $href;
+        $description .= "\n" . $standing;
         my $location = venue($city) . ", " . city($city);
 
         my $text = "$venue $city $location $home $away";
