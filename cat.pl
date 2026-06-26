@@ -1,8 +1,8 @@
 # $Id$
 my $file = shift;
 open(F, $file) || die $!;
-while(<F>)
+while (<F>)
 {
-  print "$_\n";
+    print "$_\n";
 }
 close(F);

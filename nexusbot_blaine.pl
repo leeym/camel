@@ -9,16 +9,16 @@ my $http       = HTTP::Tiny->new;
 
 sub get
 {
-  my $url = shift;
-  return $http->get($url)->{content};
+    my $url = shift;
+    return $http->get($url)->{content};
 }
 
 sub post
 {
-  my $url    = shift;
-  my $data   = shift;
-  my $header = ['X-Priority' => 5];
-  return $http->post($url, $header, $data);
+    my $url    = shift;
+    my $data   = shift;
+    my $header = ['X-Priority' => 5];
+    return $http->post($url, $header, $data);
 }
 
 my $base = 'https://ttp.cbp.dhs.gov/schedulerapi/slot-availability?locationId=';
