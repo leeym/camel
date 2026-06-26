@@ -187,16 +187,17 @@ sub fifa
                 my $group = firstDesc($r->{GroupName});
                 my $score = ($Home->{Score} || 0) . ':' . ($Away->{Score} || 0);
                 $score = 'vs' if $dtstart->epoch > time;
-                my $summary = "M$match: $home $score $away";
+                my $summary     = "M$match: $home $score $away";
+                my $description = $stage;
+                $description .= " - $group" if $group;
                 my %LI;
-                $LI{Stage} = $stage;
-                $LI{Group} = $group if $group;
                 my $href =
                   sprintf(
                     'https://www.fifa.com/en/match-centre/match/17/%d/%d/%d',
                     $r->{IdSeason}, $r->{IdStage}, $r->{IdMatch});
                 $LI{Match}    = $href;
                 $LI{Standing} = $standing;
+                $description .= "\n" . unordered(%LI);
                 my $location = venue($city) . ", " . city($city);
 
                 my $text = "$venue $city $location $home $away";
@@ -209,7 +210,7 @@ sub fifa
                     dtstart     => $dtstart->ical,
                     duration    => 'PT2H0M',
                     summary     => $summary,
-                    description => unordered(%LI),
+                    description => $description,
                     dtstamp     => $dtstamp,
                 );
                 $VEVENT{$match} = $vevent;

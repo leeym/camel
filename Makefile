@@ -11,7 +11,7 @@ ifndef CONTAINER_TAG
 	@echo 'usage: make build CONTAINER_TAG=x.x'
 	exit 255
 endif
-	for x in *pl; do echo $$x; /Users/leeym/src/sh/perltidy.sh $$x; done
+	for x in *pl; do echo $$x; perl -cw $$x && /Users/leeym/src/sh/perltidy.sh $$x; done
 	docker run --rm \
 		-v $(ROOT_DIR):$(CONTAINER_BASE_DIR) \
 		-e TAG=$(CONTAINER_TAG) \
