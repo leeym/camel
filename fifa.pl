@@ -203,11 +203,17 @@ sub fifa
                 my $text = "$venue $city $location $home $away";
                 next if $keyword && $text !~ m{$keyword}i;
 
+                # Date::ICal->ical drops the time at exactly UTC midnight,
+                # emitting a malformed date-only value like "20260627Z".
+                # Force a full DATE-TIME so calendars show the correct time.
+                my $dtstart_ical = $dtstart->ical;
+                $dtstart_ical =~ s/^(\d{8})Z$/${1}T000000Z/;
+
                 my $vevent = Data::ICal::Entry::Event->new();
                 $vevent->add_properties(
                     uid         => $id,
                     location    => $location,
-                    dtstart     => $dtstart->ical,
+                    dtstart     => $dtstart_ical,
                     duration    => 'PT2H0M',
                     summary     => $summary,
                     description => $description,
