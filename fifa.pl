@@ -33,6 +33,7 @@ my $calname;
 my %SEGMENT;
 my %VEVENT;
 my %MATCH;
+my %TEAMS;
 my @FUTURE;
 
 my $season = shift;
@@ -208,6 +209,46 @@ sub potential
     return "$slot: " . join(' or ', @teams);
 }
 
+# Build the FIFA slug for a team name following FIFA's convention:
+# lowercase, transliterate diacritics to ASCII, and turn any run of
+# non-alphanumerics (spaces, apostrophes, etc.) into a single hyphen. For
+# example "Cote d'Ivoire" -> "cote-d-ivoire", "Curacao" -> "curacao",
+# "Turkiye" -> "turkiye", "IR Iran" -> "ir-iran".
+sub team_slug
+{
+    my $slug = lc shift;
+    $slug =~ tr/àáâãäåçèéêëìíîïñòóôõöùúûüý/aaaaaaceeeeiiiinooooouuuuy/;
+    $slug =~ s/[^a-z0-9]+/-/g;
+    $slug =~ s/^-+|-+$//g;
+    return $slug;
+}
+
+# Wrap a team name in a hyperlink to its fixtures page.
+sub team_link
+{
+    my $name = shift;
+    return
+        '<a href="'
+      . 'https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/teams/'
+      . team_slug($name)
+      . '/fixtures">'
+      . $name . '</a>';
+}
+
+# Replace every team name appearing in the text with a hyperlink. Longer
+# names are linked first so a team name that is a prefix of another cannot
+# break it, and matching is case-sensitive so the lowercase slugs already
+# present in URLs are left untouched.
+sub linkify
+{
+    my $text = shift;
+    for my $name (sort { length($b) <=> length($a) } keys %TEAMS)
+    {
+        $text =~ s/\Q$name\E/team_link($name)/ge;
+    }
+    return $text;
+}
+
 sub fifa
 {
     my $url    = shift;
@@ -230,6 +271,16 @@ sub fifa
                     away => firstDesc($r->{Away}->{TeamName})
                       || $r->{PlaceHolderB},
                 };
+            }
+
+            # Collect every actual team name so they can be hyperlinked
+            # wherever they appear in a description.
+            for my $m (values %MATCH)
+            {
+                for my $slot ($m->{home}, $m->{away})
+                {
+                    $TEAMS{$slot} = 1 if $slot && !is_placeholder($slot);
+                }
             }
 
             for my $r (@{ $hash->{Results} })
@@ -266,7 +317,10 @@ sub fifa
 
                 for my $slot ($home, $away)
                 {
-                    my $line = potential($slot);
+                    # Placeholder sides list every team that could reach them;
+                    # determined sides simply name the team. Either way the
+                    # team names end up in the description so they get linked.
+                    my $line = is_placeholder($slot) ? potential($slot) : $slot;
                     $description .= "\n" . $line if $line;
                 }
                 my %LI;
@@ -277,6 +331,7 @@ sub fifa
                 $LI{Match}    = $href;
                 $LI{Standing} = $standing;
                 $description .= "\n" . unordered(%LI);
+                $description = linkify($description);
                 my $location = venue($city) . ", " . city($city);
 
                 my $text = "$venue $city $location $home $away";
