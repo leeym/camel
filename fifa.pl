@@ -32,6 +32,7 @@ my $loop    = IO::Async::Loop->new();
 my $calname;
 my %SEGMENT;
 my %VEVENT;
+my %MATCH;
 my @FUTURE;
 
 my $season = shift;
@@ -150,6 +151,63 @@ sub firstDesc
     return $ref->[0]->{Description} || '';
 }
 
+# Resolve a placeholder like "W75" (winner of match 75) or "RU101"
+# (runner-up of match 101) down to the actual teams that could fill it.
+# Knockout placeholders start with letters followed by a match number;
+# group placeholders (e.g. "2A", "3ABCDF") start with a digit and are
+# treated as leaves. Each placeholder references a strictly lower match
+# number, so the recursion always terminates.
+sub teams_for
+{
+    my $slot = shift;
+    if (my ($num) = $slot =~ /^[A-Za-z]+(\d+)$/)
+    {
+        my $m = $MATCH{$num};
+        return ($slot) if !$m;
+        return (teams_for($m->{home}), teams_for($m->{away}));
+    }
+    return ($slot);
+}
+
+# A slot is a placeholder (not an actual team) when it is a knockout code
+# like "W74"/"RU101" (letters then a match number) or a group code like
+# "2A"/"3ABCDF" (starting with a digit).
+sub is_placeholder
+{
+    my $slot = shift;
+    return $slot =~ /^[A-Za-z]+\d+$/ || $slot =~ /^\d/;
+}
+
+# For the SUMMARY, resolve a placeholder only one level deep: the two
+# participants of the match it directly references (the immediate next
+# round), e.g. "W75 (Netherlands or Morocco)". Only annotate when both
+# participants are actual teams -- never resolve a placeholder to another
+# placeholder. Anything already a resolved team name is returned unchanged.
+sub expand
+{
+    my $slot = shift;
+    return $slot if $slot !~ /^[A-Za-z]+(\d+)$/;
+    my $m = $MATCH{$1};
+    return $slot if !$m;
+    return $slot if is_placeholder($m->{home}) || is_placeholder($m->{away});
+    return "$slot ($m->{home} or $m->{away})";
+}
+
+# For the DESCRIPTION, resolve a placeholder all the way down to the full
+# list of teams that could possibly reach this slot, e.g.
+# "W89: Germany or Paraguay or France or Sweden". Returns '' when the slot
+# is a resolved team name or cannot be resolved.
+sub potential
+{
+    my $slot = shift;
+    return '' if $slot !~ /^[A-Za-z]+\d+$/;
+    my @teams = teams_for($slot);
+    return '' if !@teams || (@teams == 1 && $teams[0] eq $slot);
+    my %seen;
+    @teams = grep { !$seen{$_}++ } @teams;
+    return "$slot: " . join(' or ', @teams);
+}
+
 sub fifa
 {
     my $url    = shift;
@@ -160,6 +218,20 @@ sub fifa
             my $json = $response->content;
             die if !$json;
             my $hash = decode_json($json);
+
+            # First pass: record each match's participants (resolved team
+            # name when known, otherwise the placeholder) so that later
+            # rounds can expand placeholders into the potential teams.
+            for my $r (@{ $hash->{Results} })
+            {
+                $MATCH{ $r->{MatchNumber} } = {
+                    home => firstDesc($r->{Home}->{TeamName})
+                      || $r->{PlaceHolderA},
+                    away => firstDesc($r->{Away}->{TeamName})
+                      || $r->{PlaceHolderB},
+                };
+            }
+
             for my $r (@{ $hash->{Results} })
             {
                 $calname = firstDesc($r->{SeasonName}) if !$calname;
@@ -187,9 +259,16 @@ sub fifa
                 my $group = firstDesc($r->{GroupName});
                 my $score = ($Home->{Score} || 0) . ':' . ($Away->{Score} || 0);
                 $score = 'vs' if $dtstart->epoch > time;
-                my $summary     = "M$match: $home $score $away";
+                my $summary =
+                  "M$match: " . expand($home) . " $score " . expand($away);
                 my $description = $stage;
                 $description .= " - $group" if $group;
+
+                for my $slot ($home, $away)
+                {
+                    my $line = potential($slot);
+                    $description .= "\n" . $line if $line;
+                }
                 my %LI;
                 my $href =
                   sprintf(
