@@ -12,17 +12,9 @@ ifndef CONTAINER_TAG
 	exit 255
 endif
 	for x in *pl; do echo $$x; perl -cw $$x && /Users/leeym/src/sh/perltidy.sh $$x; done
-	docker run --rm \
-		-v $(ROOT_DIR):$(CONTAINER_BASE_DIR) \
-		-e TAG=$(CONTAINER_TAG) \
-		-e BASE_DIR=$(CONTAINER_BASE_DIR) \
-		moznion/lambda-perl-layer-foundation:$(CONTAINER_TAG) \
-		$(CONTAINER_BASE_DIR)/build.sh
-	mv func.zip ~/tmp
 	git status --porcelain | grep ^\? | awk '{print $$NF}' | xargs git add
 	-git commit -am "`git status --porcelain | awk '{print $$NF}' | awk -F/ '{print $$1}' | sort -u | xargs`"
 	git push
-	grep Code README.md
 
 clean:
 	rm -rf \

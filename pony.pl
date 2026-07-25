@@ -13,6 +13,8 @@ use Net::Async::HTTP;
 use Net::SSLeay;
 use POSIX       qw(mktime);
 use Time::HiRes qw(time sleep);
+use URI::Escape;
+use URI;
 use URL::Builder;
 use strict;
 
@@ -87,6 +89,7 @@ sub schedules
                 $html = $';
                 next if $text !~ m{World Series};
                 next if $text !~ m{1(2|4|8)U};
+                $href = absolute($href, $url);
                 captured($segment->trace_header, $href,
                     sub { event($href, $text) });
             }
@@ -104,18 +107,31 @@ sub event
         sub {
             my $response = shift;
             segment($response);
-            my $html     = $response->content;
-            my $base_uri = $1 if $url =~ m{^(https://.*?/)};
-            my $next     = build_url(
-                base_uri => $base_uri,
-                path     => $1,
-            ) if $html =~ m{<a [^>]*href="([^"]+)">GameChanger[^<]*</a>};
-            return if !$next;
+            my $html = $response->content;
+            $html =~ s{</?span[^>]*>}{}g;
+            $html =~ s{\r\n}{}g;
+            my $href = $1
+              if $html =~ m{<a [^>]*href="([^"]+)"[^>]*>\s*GameChanger};
+            return if !$href;
+            my $org = organization(absolute($href, $url));
+            return if !$org;
+            my $next = api("organizations/$org/teams");
             captured($segment->trace_header, $next,
                 sub { teams($next, $title) });
         }
     );
     push(@FUTURE, $future);
+}
+
+# The GameChanger button is an AppsFlyer OneLink that embeds the organization
+# id in its (URL-encoded) deep link, e.g.
+# https://onelink.gc.com/a5o2?deep_link_value=%2Forganizations%2FXXXX%2Fhome
+sub organization
+{
+    my $href = shift;
+    my $path = uri_unescape($href);
+    return $1 if $path =~ m{/organizations/([^/?&#]+)};
+    return;
 }
 
 sub teams
@@ -127,16 +143,17 @@ sub teams
         sub {
             my $response = shift;
             segment($response);
-            my $html = $response->content;
-            my ($href, $name) = ($1, $2)
-              if $html =~
-              m{<a href="([^"]+)">([^<]*(?:Chinese Taipei|Taiwan))</a>};
-            my $id = $1 if $href =~ m{/teams/([^/]+)};
-            $name =~ s{Chinese Taipei}{Taiwan};
-            return if !$id;
-            my $next = "https://api.team-manager.gc.com/public/teams/$id/games";
-            captured($segment->trace_header, api($id),
-                sub { team($id, $name, $title) });
+            my $data = decode_json($response->content);
+            for my $t (@{$data})
+            {
+                my $id   = $t->{id};
+                my $name = $t->{name};
+                next if $name !~ m{Chinese Taipei|Taiwan};
+                $name =~ s{Chinese Taipei}{Taiwan};
+                my $next = api("teams/$id/games");
+                captured($segment->trace_header, $next,
+                    sub { team($id, $name, $title) });
+            }
         }
     );
     push(@FUTURE, $future);
@@ -144,8 +161,16 @@ sub teams
 
 sub api
 {
-    my $id = shift;
-    return "https://api.team-manager.gc.com/public/teams/$id/games";
+    my $path = shift;
+    return "https://api.team-manager.gc.com/public/$path";
+}
+
+# Resolve a possibly relative href against the page it was found on
+sub absolute
+{
+    my $href = shift;
+    my $base = shift;
+    return URI->new_abs($href, $base)->as_string;
 }
 
 sub team
@@ -153,7 +178,7 @@ sub team
     my $id     = shift;
     my $name   = shift;
     my $title  = shift;
-    my $url    = api($id);
+    my $url    = api("teams/$id/games");
     my $future = http()->GET($url)->on_done(
         sub {
             my $response = shift;
@@ -182,10 +207,10 @@ sub team
                     $score =
                       $g->{score}->{team} . ':' . $g->{score}->{opponent_team};
                 }
-                my $summary  = "$away $score $home | $title";
                 my $start_ts = str2time($g->{start_ts});
                 my $end_ts   = str2time($g->{end_ts});
-                $score = 'vs' if $start_ts > time;
+                $score = 'vs' if !$g->{score} || $start_ts > time;
+                my $summary = "$away $score $home | $title";
 
                 warn $g->{start_ts} . " $summary\n";
                 my %LI;
@@ -406,7 +431,7 @@ sub capture
         $segment->{cause} = {
             exceptions => [
                 {
-                    id      => new_id(),
+                    id      => AWS::XRay::new_id(),
                     message => "$error",
                     remote  => Types::Serialiser::true,
                 },

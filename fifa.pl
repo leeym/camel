@@ -592,7 +592,7 @@ sub capture
         $segment->{cause} = {
             exceptions => [
                 {
-                    id      => new_id(),
+                    id      => AWS::XRay::new_id(),
                     message => "$error",
                     remote  => Types::Serialiser::true,
                 },
