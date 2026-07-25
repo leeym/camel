@@ -1,0 +1,44 @@
+name: Deploy Perl Lambda
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. 產生 cpanfile (重現 Makefile 的 cpanfile 目標)
+      - name: Generate cpanfile
+        run: |
+          cat *.pl | grep "^use [A-Z]" | awk '{print $2}' | sed 's/;//' | sort -u | sed "s/^/requires '/;s/'/,'0';/" > cpanfile
+
+      # 2. 呼叫 Docker 進行與 build.sh 完全相同的打包程序
+      - name: Build Lambda Package inside Docker
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/tmp/func \
+            -e TAG=5.30 \
+            -e BASE_DIR=/tmp/func \
+            moznion/lambda-perl-layer-foundation:5.30 \
+            /tmp/func/build.sh
+
+      # 3. 設定 AWS 存取憑證
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      # 4. 將打包好的 func.zip 上傳更新至 AWS Lambda
+      - name: Deploy to AWS Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name Camel \
+            --zip-file fileb://func.zip
