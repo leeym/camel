@@ -13,12 +13,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. 產生 cpanfile (重現 Makefile 的 cpanfile 目標)
+      # 1. 產生 cpanfile (直接重現 Makefile 邏輯)
       - name: Generate cpanfile
         run: |
-          cat *.pl | grep "^use [A-Z]" | awk '{print $2}' | sed 's/;//' | sort -u | sed "s/^/requires '/;s/'/,'0';/" > cpanfile
+          cat *.pl | grep "^use [A-Z]" | awk '{print $2}' | sed 's/;//' | sort -u | sed "s/^/requires '/;s/$/', '0';/" > cpanfile
+          echo "=== cpanfile content ==="
+          cat cpanfile
 
-      # 2. 呼叫 Docker 進行與 build.sh 完全相同的打包程序
+      # 2. 執行 Docker 打包
       - name: Build Lambda Package inside Docker
         run: |
           docker run --rm \
@@ -28,7 +30,7 @@ jobs:
             moznion/lambda-perl-layer-foundation:5.30 \
             /tmp/func/build.sh
 
-      # 3. 設定 AWS 存取憑證
+      # 3. 設定 AWS 憑證
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -36,7 +38,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
 
-      # 4. 將打包好的 func.zip 上傳更新至 AWS Lambda
+      # 4. 部署至 Lambda
       - name: Deploy to AWS Lambda
         run: |
           aws lambda update-function-code \
