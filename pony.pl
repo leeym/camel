@@ -89,6 +89,7 @@ sub schedules
                 $html = $';
                 next if $text !~ m{World Series};
                 next if $text !~ m{1(2|4|8)U};
+                $href =~ s{^http:}{https:};
                 $href = absolute($href, $url);
                 captured($segment->trace_header, $href,
                     sub { event($href, $text) });
