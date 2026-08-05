@@ -148,9 +148,10 @@ sub division
 
                 my @TEAM = teams($row);
                 next if scalar(@TEAM) != 2;
-                my $away = $TEAM[0]->{name};
-                my $home = $TEAM[1]->{name};
-                next if !taiwan($away, $home);
+                my $away     = $TEAM[0]->{name};
+                my $home     = $TEAM[1]->{name};
+                my ($taiwan) = grep { taiwan($_->{name}) } @TEAM;
+                next if !$taiwan;
 
                 my ($year, $month, $day) =
                   $class =~ m{date_(\d{4})(\d{2})(\d{2})};
@@ -172,15 +173,11 @@ sub division
                 warn "$year-$month-$day $hour:$min ($ENV{TZ}) $summary\n";
                 my $venue = tag($row, qr{<td [^>]*data-facilityid='[^']*'>});
                 my %LI;
-                $LI{Schedule}  = $url;
-                $LI{Standings} = $url;
-                $LI{Standings} =~ s{/Division\.aspx}{/Standings.aspx};
-                for my $t (@TEAM)
-                {
-                    (my $team = $url) =~ s{/Division\.aspx}{/Team.aspx};
-                    $LI{ $t->{name} } = $team . '&IDTeam=' . $t->{id};
-                }
-                $LI{Watch} = $e->{gameChangerUrl} if $e->{gameChangerUrl};
+
+                # Pool Standings, Schedule and Bracket of the division
+                $LI{SportsEngine} = $url;
+                (my $team = $url) =~ s{/Division\.aspx}{/Team.aspx};
+                $LI{ $taiwan->{name} } = $team . '&IDTeam=' . $taiwan->{id};
                 my $vevent = Data::ICal::Entry::Event->new();
                 $vevent->add_properties(
                     description => unordered(%LI),
