@@ -112,6 +112,42 @@ sub events
                     warn "No schedule yet: $title\n";
                     next;
                 }
+
+              # Some events link straight to their division, others to the whole
+              # tournament, which in turn links to one division per age group.
+                if ($next =~ m{/Tournament\.aspx}i)
+                {
+                    captured($segment->trace_header, $next,
+                        sub { tournament($next, $e) });
+                }
+                else
+                {
+                    captured($segment->trace_header, $next,
+                        sub { division($next, $e) });
+                }
+            }
+        }
+    );
+    push(@FUTURE, $future);
+}
+
+# A TourneyMachine tournament page carries no schedule of its own, it links to
+# every division of the tournament as
+# <a class='well tournamentDivision' href='Division.aspx?...'>
+sub tournament
+{
+    my $url     = shift;
+    my $e       = shift;
+    my $segment = $SEGMENT{$url};
+    my $future  = get($url)->on_done(
+        sub {
+            my $response = shift;
+            segment($response);
+            my $html = $response->content;
+            while ($html =~
+                m{<a[^>]+href=["']([^"']*Division\.aspx\?[^"']+)["']}gi)
+            {
+                my $next = absolute(trimmed($1), $url);
                 captured($segment->trace_header, $next,
                     sub { division($next, $e) });
             }
@@ -129,6 +165,7 @@ sub division
     my $e      = shift;
     my $title  = trimmed($e->{title});
     my $where  = $e->{location}->{name};
+    my $gc     = gamechanger($e);
     my $future = get($url)->on_done(
         sub {
             my $response = shift;
@@ -178,6 +215,9 @@ sub division
                 $LI{SportsEngine} = $url;
                 (my $team = $url) =~ s{/Division\.aspx}{/Team.aspx};
                 $LI{ $taiwan->{name} } = $team . '&IDTeam=' . $taiwan->{id};
+
+                # Boxscore and Gameday of every game of the event
+                $LI{GameChanger} = $gc if $gc;
                 my $vevent = Data::ICal::Entry::Event->new();
                 $vevent->add_properties(
                     description => unordered(%LI),
@@ -210,6 +250,21 @@ sub teams
         push(@TEAM, { id => $id, name => $name });
     }
     return @TEAM;
+}
+
+# TourneyMachine carries the schedule of an event, GameChanger the Boxscore and
+# the Gameday of every game of it, either as a field of its own or as one of
+# the broadcasts of the event.
+sub gamechanger
+{
+    my $e = shift;
+    return $e->{gameChangerUrl} if $e->{gameChangerUrl};
+    for my $b (@{ $e->{broadcasts} })
+    {
+        my $url = $b->{streamURL};
+        return $url if $url && $url =~ m{\bgc\.com/};
+    }
+    return;
 }
 
 sub taiwan
