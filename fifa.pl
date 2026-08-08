@@ -44,112 +44,112 @@ my $standing =
 my $keyword = shift;
 
 my $url = build_url(
-    base_uri => 'https://api.fifa.com/',
-    path => "/api/v3/calendar/matches?language=en&count=500&idSeason=$season",
+  base_uri => 'https://api.fifa.com/',
+  path     => "/api/v3/calendar/matches?language=en&count=500&idSeason=$season",
 );
 
 captured($ENV{_X_AMZN_TRACE_ID}, $url, sub { fifa($url) });
 
 my %location_info = (
-    'Atlanta' => {
-        offset => '-0400',
-        name   => 'Atlanta, GA',
-        venue  => 'Mercedes-Benz Stadium',
-    },
-    'Boston' => {
-        offset => '-0400',
-        name   => 'Foxborough, MA',
-        venue  => 'Gillette Stadium',
-    },
-    'Dallas' => {
-        offset => '-0500',
-        name   => 'Arlington, TX',
-        venue  => 'AT&T Stadium',
-    },
-    'Guadalajara' => {
-        offset => '-0600',
-        name   => 'Guadalajara, Mexico',
-        venue  => 'Estadio Akron',
-    },
-    'Houston' => {
-        offset => '-0500',
-        name   => 'Houston, TX',
-        venue  => 'NRG Stadium',
-    },
-    'Kansas City' => {
-        offset => '-0500',
-        name   => 'Kansas City, MO',
-        venue  => 'Arrowhead Stadium',
-    },
-    'Los Angeles' => {
-        offset => '-0700',
-        name   => 'Inglewood, CA',
-        venue  => 'SoFi Stadium',
-    },
-    'Mexico City' => {
-        offset => '-0600',
-        name   => 'Mexico City, Mexico',
-        venue  => 'Estadio Banorte',
-    },
-    'Miami' => {
-        offset => '-0400',
-        name   => 'Miami, FL',
-        venue  => 'Hard Rock Stadium',
-    },
-    'Monterrey' => {
-        offset => '-0600',
-        name   => 'Guadalupe, Mexico',
-        venue  => 'Estadio BBVA',
-    },
-    'New Jersey' => {
-        offset => '-0400',
-        name   => 'East Rutherford, NJ',
-        venue  => 'MetLife Stadium',
-    },
-    'Philadelphia' => {
-        offset => '-0400',
-        name   => 'Philadelphia, PA',
-        venue  => 'Lincoln Financial Field',
-    },
-    'San Francisco Bay Area' => {
-        offset => '-0700',
-        name   => 'Santa Clara, CA',
-        venue  => "Levi's Stadium",
-    },
-    'Seattle' => {
-        offset => '-0700',
-        name   => 'Seattle, WA',
-        venue  => 'Lumen Field',
-    },
-    'Toronto' => {
-        offset => '-0400',
-        name   => 'Toronto, ON',
-        venue  => 'BMO Field',
-    },
-    'Vancouver' => {
-        offset => '-0700',
-        name   => 'Vancouver, BC',
-        venue  => 'BC Place',
-    },
+  'Atlanta' => {
+    offset => '-0400',
+    name   => 'Atlanta, GA',
+    venue  => 'Mercedes-Benz Stadium',
+  },
+  'Boston' => {
+    offset => '-0400',
+    name   => 'Foxborough, MA',
+    venue  => 'Gillette Stadium',
+  },
+  'Dallas' => {
+    offset => '-0500',
+    name   => 'Arlington, TX',
+    venue  => 'AT&T Stadium',
+  },
+  'Guadalajara' => {
+    offset => '-0600',
+    name   => 'Guadalajara, Mexico',
+    venue  => 'Estadio Akron',
+  },
+  'Houston' => {
+    offset => '-0500',
+    name   => 'Houston, TX',
+    venue  => 'NRG Stadium',
+  },
+  'Kansas City' => {
+    offset => '-0500',
+    name   => 'Kansas City, MO',
+    venue  => 'Arrowhead Stadium',
+  },
+  'Los Angeles' => {
+    offset => '-0700',
+    name   => 'Inglewood, CA',
+    venue  => 'SoFi Stadium',
+  },
+  'Mexico City' => {
+    offset => '-0600',
+    name   => 'Mexico City, Mexico',
+    venue  => 'Estadio Banorte',
+  },
+  'Miami' => {
+    offset => '-0400',
+    name   => 'Miami, FL',
+    venue  => 'Hard Rock Stadium',
+  },
+  'Monterrey' => {
+    offset => '-0600',
+    name   => 'Guadalupe, Mexico',
+    venue  => 'Estadio BBVA',
+  },
+  'New Jersey' => {
+    offset => '-0400',
+    name   => 'East Rutherford, NJ',
+    venue  => 'MetLife Stadium',
+  },
+  'Philadelphia' => {
+    offset => '-0400',
+    name   => 'Philadelphia, PA',
+    venue  => 'Lincoln Financial Field',
+  },
+  'San Francisco Bay Area' => {
+    offset => '-0700',
+    name   => 'Santa Clara, CA',
+    venue  => "Levi's Stadium",
+  },
+  'Seattle' => {
+    offset => '-0700',
+    name   => 'Seattle, WA',
+    venue  => 'Lumen Field',
+  },
+  'Toronto' => {
+    offset => '-0400',
+    name   => 'Toronto, ON',
+    venue  => 'BMO Field',
+  },
+  'Vancouver' => {
+    offset => '-0700',
+    name   => 'Vancouver, BC',
+    venue  => 'BC Place',
+  },
 );
 
 sub venue
 {
-    my $name = shift;
-    return $location_info{$name}->{venue} || $name;
+  my $name = shift;
+  return $location_info{$name}->{venue} || $name;
 }
 
 sub city
 {
-    my $name = shift;
-    die $name if !$location_info{$name}->{name};
-    return $location_info{$name}->{name} || $name;
+  my $name = shift;
+  die $name if !$location_info{$name}->{name};
+  return $location_info{$name}->{name} || $name;
 }
 
 sub firstDesc
 {
-    my $ref = shift;
-    return $ref->[0]->{Description} || '';
+  my $ref = shift;
+  return $ref->[0]->{Description} || '';
 }
 
 # Resolve a placeholder like "W75" (winner of match 75) or "RU101"
@@ -160,14 +160,14 @@ sub firstDesc
 # number, so the recursion always terminates.
 sub teams_for
 {
-    my $slot = shift;
-    if (my ($num) = $slot =~ /^[A-Za-z]+(\d+)$/)
-    {
-        my $m = $MATCH{$num};
-        return ($slot) if !$m;
-        return (teams_for($m->{home}), teams_for($m->{away}));
-    }
-    return ($slot);
+  my $slot = shift;
+  if (my ($num) = $slot =~ /^[A-Za-z]+(\d+)$/)
+  {
+    my $m = $MATCH{$num};
+    return ($slot) if !$m;
+    return (teams_for($m->{home}), teams_for($m->{away}));
+  }
+  return ($slot);
 }
 
 # A slot is a placeholder (not an actual team) when it is a knockout code
@@ -175,8 +175,8 @@ sub teams_for
 # "2A"/"3ABCDF" (starting with a digit).
 sub is_placeholder
 {
-    my $slot = shift;
-    return $slot =~ /^[A-Za-z]+\d+$/ || $slot =~ /^\d/;
+  my $slot = shift;
+  return $slot =~ /^[A-Za-z]+\d+$/ || $slot =~ /^\d/;
 }
 
 # For the SUMMARY, resolve a placeholder only one level deep: the two
@@ -186,12 +186,12 @@ sub is_placeholder
 # placeholder. Anything already a resolved team name is returned unchanged.
 sub expand
 {
-    my $slot = shift;
-    return $slot if $slot !~ /^[A-Za-z]+(\d+)$/;
-    my $m = $MATCH{$1};
-    return $slot if !$m;
-    return $slot if is_placeholder($m->{home}) || is_placeholder($m->{away});
-    return "$slot ($m->{home} or $m->{away})";
+  my $slot = shift;
+  return $slot if $slot !~ /^[A-Za-z]+(\d+)$/;
+  my $m = $MATCH{$1};
+  return $slot if !$m;
+  return $slot if is_placeholder($m->{home}) || is_placeholder($m->{away});
+  return "$slot ($m->{home} or $m->{away})";
 }
 
 # For the DESCRIPTION, resolve a placeholder all the way down to the full
@@ -200,13 +200,13 @@ sub expand
 # is a resolved team name or cannot be resolved.
 sub potential
 {
-    my $slot = shift;
-    return '' if $slot !~ /^[A-Za-z]+\d+$/;
-    my @teams = teams_for($slot);
-    return '' if !@teams || (@teams == 1 && $teams[0] eq $slot);
-    my %seen;
-    @teams = grep { !$seen{$_}++ } @teams;
-    return "$slot: " . join(' or ', @teams);
+  my $slot = shift;
+  return '' if $slot !~ /^[A-Za-z]+\d+$/;
+  my @teams = teams_for($slot);
+  return '' if !@teams || (@teams == 1 && $teams[0] eq $slot);
+  my %seen;
+  @teams = grep { !$seen{$_}++ } @teams;
+  return "$slot: " . join(' or ', @teams);
 }
 
 # Build the FIFA slug for a team name following FIFA's convention:
@@ -216,23 +216,23 @@ sub potential
 # "Turkiye" -> "turkiye", "IR Iran" -> "ir-iran".
 sub team_slug
 {
-    my $slug = lc shift;
-    $slug =~ tr/àáâãäåçèéêëìíîïñòóôõöùúûüý/aaaaaaceeeeiiiinooooouuuuy/;
-    $slug =~ s/[^a-z0-9]+/-/g;
-    $slug =~ s/^-+|-+$//g;
-    return $slug;
+  my $slug = lc shift;
+  $slug =~ tr/àáâãäåçèéêëìíîïñòóôõöùúûüý/aaaaaaceeeeiiiinooooouuuuy/;
+  $slug =~ s/[^a-z0-9]+/-/g;
+  $slug =~ s/^-+|-+$//g;
+  return $slug;
 }
 
 # Wrap a team name in a hyperlink to its fixtures page.
 sub team_link
 {
-    my $name = shift;
-    return
-        '<a href="'
-      . 'https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/teams/'
-      . team_slug($name)
-      . '/fixtures">'
-      . $name . '</a>';
+  my $name = shift;
+  return
+      '<a href="'
+    . 'https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/teams/'
+    . team_slug($name)
+    . '/fixtures">'
+    . $name . '</a>';
 }
 
 # Replace every team name appearing in the text with a hyperlink. Longer
@@ -241,365 +241,361 @@ sub team_link
 # present in URLs are left untouched.
 sub linkify
 {
-    my $text = shift;
-    for my $name (sort { length($b) <=> length($a) } keys %TEAMS)
-    {
-        $text =~ s/\Q$name\E/team_link($name)/ge;
-    }
-    return $text;
+  my $text = shift;
+  for my $name (sort { length($b) <=> length($a) } keys %TEAMS)
+  {
+    $text =~ s/\Q$name\E/team_link($name)/ge;
+  }
+  return $text;
 }
 
 sub fifa
 {
-    my $url    = shift;
-    my $future = http()->GET($url)->on_done(
-        sub {
-            my $response = shift;
-            segment($response);
-            my $json = $response->content;
-            die if !$json;
-            my $hash = decode_json($json);
+  my $url    = shift;
+  my $future = http()->GET($url)->on_done(
+    sub {
+      my $response = shift;
+      segment($response);
+      my $json = $response->content;
+      die if !$json;
+      my $hash = decode_json($json);
 
-            # First pass: record each match's participants (resolved team
-            # name when known, otherwise the placeholder) so that later
-            # rounds can expand placeholders into the potential teams.
-            for my $r (@{ $hash->{Results} })
-            {
-                $MATCH{ $r->{MatchNumber} } = {
-                    home => firstDesc($r->{Home}->{TeamName})
-                      || $r->{PlaceHolderA},
-                    away => firstDesc($r->{Away}->{TeamName})
-                      || $r->{PlaceHolderB},
-                };
-            }
+      # First pass: record each match's participants (resolved team
+      # name when known, otherwise the placeholder) so that later
+      # rounds can expand placeholders into the potential teams.
+      for my $r (@{ $hash->{Results} })
+      {
+        $MATCH{ $r->{MatchNumber} } = {
+          home => firstDesc($r->{Home}->{TeamName}) || $r->{PlaceHolderA},
+          away => firstDesc($r->{Away}->{TeamName}) || $r->{PlaceHolderB},
+        };
+      }
 
-            # Collect every actual team name so they can be hyperlinked
-            # wherever they appear in a description.
-            for my $m (values %MATCH)
-            {
-                for my $slot ($m->{home}, $m->{away})
-                {
-                    $TEAMS{$slot} = 1 if $slot && !is_placeholder($slot);
-                }
-            }
-
-            for my $r (@{ $hash->{Results} })
-            {
-                $calname = firstDesc($r->{SeasonName}) if !$calname;
-                my $city = firstDesc($r->{Stadium}->{CityName});
-                my $date = $r->{LocalDate};
-                my ($yyyy, $mm, $dd, $HH, $MM, $SS) =
-                  $date =~ /(\d+)-(\d+)-(\d+)T(\d+):(\d+):(\d+)Z/;
-                my $dtstart = Date::ICal->new(
-                    year   => $yyyy,
-                    month  => $mm,
-                    day    => $dd,
-                    hour   => $HH,
-                    min    => $MM,
-                    sec    => $SS,
-                    offset => $location_info{$city}->{offset},
-                );
-                my $id    = $r->{IdMatch};
-                my $match = $r->{MatchNumber};
-                my $venue = firstDesc($r->{Stadium}->{Name});
-                my $Home  = $r->{Home};
-                my $Away  = $r->{Away};
-                my $home  = firstDesc($Home->{TeamName}) || $r->{PlaceHolderA};
-                my $away  = firstDesc($Away->{TeamName}) || $r->{PlaceHolderB};
-                my $stage = firstDesc($r->{StageName});
-                my $group = firstDesc($r->{GroupName});
-                my $score = ($Home->{Score} || 0) . ':' . ($Away->{Score} || 0);
-                $score = 'vs' if $dtstart->epoch > time;
-                my $summary =
-                  "M$match: " . expand($home) . " $score " . expand($away);
-                my $description = $stage;
-                $description .= " - $group" if $group;
-
-                for my $slot ($home, $away)
-                {
-                    # Placeholder sides list every team that could reach them;
-                    # determined sides simply name the team. Either way the
-                    # team names end up in the description so they get linked.
-                    my $line = is_placeholder($slot) ? potential($slot) : $slot;
-                    $description .= "\n" . $line if $line;
-                }
-                my %LI;
-                my $href =
-                  sprintf(
-                    'https://www.fifa.com/en/match-centre/match/17/%d/%d/%d',
-                    $r->{IdSeason}, $r->{IdStage}, $r->{IdMatch});
-                $LI{Match}    = $href;
-                $LI{Standing} = $standing;
-                $description .= "\n" . unordered(%LI);
-                $description = linkify($description);
-                my $location = venue($city) . ", " . city($city);
-
-                my $text = "$venue $city $location $home $away";
-                next if $keyword && $text !~ m{$keyword}i;
-
-                # Date::ICal->ical drops the time at exactly UTC midnight,
-                # emitting a malformed date-only value like "20260627Z".
-                # Force a full DATE-TIME so calendars show the correct time.
-                my $dtstart_ical = $dtstart->ical;
-                $dtstart_ical =~ s/^(\d{8})Z$/${1}T000000Z/;
-
-                my $vevent = Data::ICal::Entry::Event->new();
-                $vevent->add_properties(
-                    uid         => $id,
-                    location    => $location,
-                    dtstart     => $dtstart_ical,
-                    duration    => 'PT2H0M',
-                    summary     => $summary,
-                    description => $description,
-                    dtstamp     => $dtstamp,
-                );
-                $VEVENT{$match} = $vevent;
-
-                #warn Dumper($r);
-            }
+      # Collect every actual team name so they can be hyperlinked
+      # wherever they appear in a description.
+      for my $m (values %MATCH)
+      {
+        for my $slot ($m->{home}, $m->{away})
+        {
+          $TEAMS{$slot} = 1 if $slot && !is_placeholder($slot);
         }
-    );
-    push(@FUTURE, $future);
+      }
+
+      for my $r (@{ $hash->{Results} })
+      {
+        $calname = firstDesc($r->{SeasonName}) if !$calname;
+        my $city = firstDesc($r->{Stadium}->{CityName});
+        my $date = $r->{LocalDate};
+        my ($yyyy, $mm, $dd, $HH, $MM, $SS) =
+          $date =~ /(\d+)-(\d+)-(\d+)T(\d+):(\d+):(\d+)Z/;
+        my $dtstart = Date::ICal->new(
+          year   => $yyyy,
+          month  => $mm,
+          day    => $dd,
+          hour   => $HH,
+          min    => $MM,
+          sec    => $SS,
+          offset => $location_info{$city}->{offset},
+        );
+        my $id    = $r->{IdMatch};
+        my $match = $r->{MatchNumber};
+        my $venue = firstDesc($r->{Stadium}->{Name});
+        my $Home  = $r->{Home};
+        my $Away  = $r->{Away};
+        my $home  = firstDesc($Home->{TeamName}) || $r->{PlaceHolderA};
+        my $away  = firstDesc($Away->{TeamName}) || $r->{PlaceHolderB};
+        my $stage = firstDesc($r->{StageName});
+        my $group = firstDesc($r->{GroupName});
+        my $score = ($Home->{Score} || 0) . ':' . ($Away->{Score} || 0);
+        $score = 'vs' if $dtstart->epoch > time;
+        my $summary = "M$match: " . expand($home) . " $score " . expand($away);
+        my $description = $stage;
+        $description .= " - $group" if $group;
+
+        for my $slot ($home, $away)
+        {
+          # Placeholder sides list every team that could reach them;
+          # determined sides simply name the team. Either way the
+          # team names end up in the description so they get linked.
+          my $line = is_placeholder($slot) ? potential($slot) : $slot;
+          $description .= "\n" . $line if $line;
+        }
+        my %LI;
+        my $href =
+          sprintf('https://www.fifa.com/en/match-centre/match/17/%d/%d/%d',
+          $r->{IdSeason}, $r->{IdStage}, $r->{IdMatch});
+        $LI{Match}    = $href;
+        $LI{Standing} = $standing;
+        $description .= "\n" . unordered(%LI);
+        $description = linkify($description);
+        my $location = venue($city) . ", " . city($city);
+
+        my $text = "$venue $city $location $home $away";
+        next if $keyword && $text !~ m{$keyword}i;
+
+        # Date::ICal->ical drops the time at exactly UTC midnight,
+        # emitting a malformed date-only value like "20260627Z".
+        # Force a full DATE-TIME so calendars show the correct time.
+        my $dtstart_ical = $dtstart->ical;
+        $dtstart_ical =~ s/^(\d{8})Z$/${1}T000000Z/;
+
+        my $vevent = Data::ICal::Entry::Event->new();
+        $vevent->add_properties(
+          uid         => $id,
+          location    => $location,
+          dtstart     => $dtstart_ical,
+          duration    => 'PT2H0M',
+          summary     => $summary,
+          description => $description,
+          dtstamp     => $dtstamp,
+        );
+        $VEVENT{$match} = $vevent;
+
+        #warn Dumper($r);
+      }
+    }
+  );
+  push(@FUTURE, $future);
 }
 
 for my $future (@FUTURE)
 {
-    my $future = shift @FUTURE;
-    await $future->get();
+  my $future = shift @FUTURE;
+  await $future->get();
 }
 
 my $ics = Data::ICal->new(calname => $calname);
 
 for my $vevent (sort by_dtstart values %VEVENT)
 {
-    $ics->add_entry($vevent);
+  $ics->add_entry($vevent);
 }
 my $vevent = Data::ICal::Entry::Event->new();
 $vevent->add_properties(
-    dtstart     => Date::ICal->new(epoch => $start)->ical,
-    dtend       => Date::ICal->new(epoch => time)->ical,
-    summary     => 'Last Modified',
-    uid         => 'Last Modified',
-    description => last_modified_description(),
-    dtstamp     => $dtstamp,
+  dtstart     => Date::ICal->new(epoch => $start)->ical,
+  dtend       => Date::ICal->new(epoch => time)->ical,
+  summary     => 'Last Modified',
+  uid         => 'Last Modified',
+  description => last_modified_description(),
+  dtstamp     => $dtstamp,
 );
 $ics->add_entry($vevent);
 print encode('UTF-8', $ics->as_string);
 
 END
 {
-    AWS::XRay->sock->flush();
-    die $@ if $@;
-    warn "Total: " . scalar(keys %VEVENT) . " events\n";
-    warn "Duration: " . int((time - $start) * 1000) . " ms\n";
+  AWS::XRay->sock->flush();
+  die $@ if $@;
+  warn "Total: " . scalar(keys %VEVENT) . " events\n";
+  warn "Duration: " . int((time - $start) * 1000) . " ms\n";
 }
 
 sub dtstart
 {
-    my $vevent = shift;
-    return $vevent->{properties}{'dtstart'}[0]->{value};
+  my $vevent = shift;
+  return $vevent->{properties}{'dtstart'}[0]->{value};
 }
 
 sub by_dtstart
 {
-    return dtstart($a) cmp dtstart($b);
+  return dtstart($a) cmp dtstart($b);
 }
 
 sub http
 {
-    my $http = Net::Async::HTTP->new(
-        max_connections_per_host => 0,
-        max_in_flight            => 0,
-        timeout                  => $start + 28 - time,
-    );
-    $loop->add($http);
-    return $http;
+  my $http = Net::Async::HTTP->new(
+    max_connections_per_host => 0,
+    max_in_flight            => 0,
+    timeout                  => $start + 28 - time,
+  );
+  $loop->add($http);
+  return $http;
 }
 
 sub segment
 {
-    my $response = shift;
-    my $url      = $response->request->url->as_string;
-    my $segment  = $SEGMENT{$url};
-    return if !$segment;
-    $segment->{end_time} = time;
-    $segment->{http}     = {
-        request => {
-            method => $response->request->method,
-            url    => $url,
-        },
-        response => {
-            status         => int($response->code),
-            content_length => length($response->content),
-        },
-    };
-    $segment->close();
-    my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
-    warn "GET $url ($elapsed ms)\n";
+  my $response = shift;
+  my $url      = $response->request->url->as_string;
+  my $segment  = $SEGMENT{$url};
+  return if !$segment;
+  $segment->{end_time} = time;
+  $segment->{http}     = {
+    request => {
+      method => $response->request->method,
+      url    => $url,
+    },
+    response => {
+      status         => int($response->code),
+      content_length => length($response->content),
+    },
+  };
+  $segment->close();
+  my $elapsed = int(($segment->{end_time} - $segment->{start_time}) * 1000);
+  warn "GET $url ($elapsed ms)\n";
 }
 
 sub last_modified_description
 {
-    my %LI;
-    my $region = $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
-    my $url;
-    $url .= "https://$region.console.aws.amazon.com/cloudwatch/home?";
-    $url .= "region=$region";
-    if ($ENV{_X_AMZN_TRACE_ID})
+  my %LI;
+  my $region = $ENV{AWS_REGION} || $ENV{AWS_DEFAULT_REGION} || 'us-west-2';
+  my $url;
+  $url .= "https://$region.console.aws.amazon.com/cloudwatch/home?";
+  $url .= "region=$region";
+  if ($ENV{_X_AMZN_TRACE_ID})
+  {
+    my $t = $1 if $ENV{_X_AMZN_TRACE_ID} =~ m{Root=([0-9a-fA-F-]+)};
+    $LI{Trace} = $url . "#xray:traces/$t";
+  }
+  if ($ENV{AWS_LAMBDA_LOG_STREAM_NAME} && $ENV{AWS_LAMBDA_LOG_GROUP_NAME})
+  {
+    $LI{'Logs'} =
+        $url
+      . '#logsV2:log-groups/log-group/'
+      . escaped($ENV{AWS_LAMBDA_LOG_GROUP_NAME})
+      . '/log-events/'
+      . escaped($ENV{AWS_LAMBDA_LOG_STREAM_NAME});
+  }
+  if (!scalar(%LI))
+  {
+    for my $url (keys %SEGMENT)
     {
-        my $t = $1 if $ENV{_X_AMZN_TRACE_ID} =~ m{Root=([0-9a-fA-F-]+)};
-        $LI{Trace} = $url . "#xray:traces/$t";
+      $LI{$url} = $url;
     }
-    if ($ENV{AWS_LAMBDA_LOG_STREAM_NAME} && $ENV{AWS_LAMBDA_LOG_GROUP_NAME})
-    {
-        $LI{'Logs'} =
-            $url
-          . '#logsV2:log-groups/log-group/'
-          . escaped($ENV{AWS_LAMBDA_LOG_GROUP_NAME})
-          . '/log-events/'
-          . escaped($ENV{AWS_LAMBDA_LOG_STREAM_NAME});
-    }
-    if (!scalar(%LI))
-    {
-        for my $url (keys %SEGMENT)
-        {
-            $LI{$url} = $url;
-        }
-    }
-    return unordered(%LI);
+  }
+  return unordered(%LI);
 }
 
 sub escaped
 {
-    my $src = shift;
-    my $dst = $src;
-    $dst =~ s{\[}{%5B}g;
-    $dst =~ s{\]}{%5D}g;
-    $dst =~ s{/}{%2F}g;
-    $dst =~ s{\$}{%24}g;
-    $dst =~ s{%}{\$25}g;
-    return $dst;
+  my $src = shift;
+  my $dst = $src;
+  $dst =~ s{\[}{%5B}g;
+  $dst =~ s{\]}{%5D}g;
+  $dst =~ s{/}{%2F}g;
+  $dst =~ s{\$}{%24}g;
+  $dst =~ s{%}{\$25}g;
+  return $dst;
 }
 
 sub unordered
 {
-    my %LI = @_;
-    my $html;
-    for my $text (sort keys %LI)
-    {
-        $html .= '<li><a href="' . $LI{$text} . '">' . $text . '</a></li>';
-    }
-    return '<ul>' . $html . '</ul>';
+  my %LI = @_;
+  my $html;
+  for my $text (sort keys %LI)
+  {
+    $html .= '<li><a href="' . $LI{$text} . '">' . $text . '</a></li>';
+  }
+  return '<ul>' . $html . '</ul>';
 }
 
 sub captured
 {
-    my $header = shift;
-    my $url    = shift;
-    my $func   = shift;
-    return if $SEGMENT{$url};
-    my $code = sub {
-        my $segment = shift;
-        $SEGMENT{$url} = $segment;
-        $func->();
-    };
-    my $name = $url;
-    $name =~ s{\?}{#}g;
-    if ($header)
-    {
-        capture_from($header, $name, $code);
-    }
-    else
-    {
-        capture($name, $code);
-    }
+  my $header = shift;
+  my $url    = shift;
+  my $func   = shift;
+  return if $SEGMENT{$url};
+  my $code = sub {
+    my $segment = shift;
+    $SEGMENT{$url} = $segment;
+    $func->();
+  };
+  my $name = $url;
+  $name =~ s{\?}{#}g;
+  if ($header)
+  {
+    capture_from($header, $name, $code);
+  }
+  else
+  {
+    capture($name, $code);
+  }
 }
 
 # Cloned from AWS::XRay::capture_from
 sub capture_from
 {
-    my ($header, $name, $code) = @_;
-    my ($trace_id, $segment_id, $sampled) =
-      AWS::XRay::parse_trace_header($header);
+  my ($header, $name, $code) = @_;
+  my ($trace_id, $segment_id, $sampled) =
+    AWS::XRay::parse_trace_header($header);
 
-    $AWS::XRay::SAMPLED = $sampled // $AWS::XRay::SAMPLER->();
-    $AWS::XRay::ENABLED = $AWS::XRay::SAMPLED;
-    ($AWS::XRay::TRACE_ID, $AWS::XRay::SEGMENT_ID) = ($trace_id, $segment_id);
-    capture($name, $code);
+  $AWS::XRay::SAMPLED = $sampled // $AWS::XRay::SAMPLER->();
+  $AWS::XRay::ENABLED = $AWS::XRay::SAMPLED;
+  ($AWS::XRay::TRACE_ID, $AWS::XRay::SEGMENT_ID) = ($trace_id, $segment_id);
+  capture($name, $code);
 }
 
 # Cloned from AWS::XRay::capture without closing the segment
 sub capture
 {
-    my ($name, $code) = @_;
-    if (!AWS::XRay::is_valid_name($name))
-    {
-        my $msg = "invalid segment name: $name";
-        $AWS::XRay::CROAK_INVALID_NAME ? croak($msg) : carp($msg);
-    }
-    my $wantarray = wantarray;
+  my ($name, $code) = @_;
+  if (!AWS::XRay::is_valid_name($name))
+  {
+    my $msg = "invalid segment name: $name";
+    $AWS::XRay::CROAK_INVALID_NAME ? croak($msg) : carp($msg);
+  }
+  my $wantarray = wantarray;
 
-    my $enabled;
-    my $sampled = $AWS::XRay::SAMPLED;
-    if (defined $AWS::XRay::SAMPLED)
+  my $enabled;
+  my $sampled = $AWS::XRay::SAMPLED;
+  if (defined $AWS::XRay::SAMPLED)
+  {
+    $enabled = $AWS::XRay::ENABLED ? 1 : 0;    # fix true or false (not undef)
+  }
+  elsif ($AWS::XRay::TRACE_ID)
+  {
+    $enabled = 0;                              # called from parent capture
+  }
+  else
+  {
+    # root capture try sampling
+    $sampled = $AWS::XRay::SAMPLER->() ? 1 : 0;
+    $enabled = $sampled                ? 1 : 0;
+  }
+  $AWS::XRay::ENABLED = $enabled;
+  $AWS::XRay::SAMPLED = $sampled;
+
+  return $code->(AWS::XRay::Segment->new) if !$enabled;
+
+  $AWS::XRay::TRACE_ID = $AWS::XRay::TRACE_ID // AWS::XRay::new_trace_id();
+
+  my $segment = AWS::XRay::Segment->new({ name => $name });
+  unless (defined $segment->{type} && $segment->{type} eq "subsegment")
+  {
+    $_->apply_plugin($segment) for @AWS::XRay::PLUGINS;
+  }
+
+  $AWS::XRay::SEGMENT_ID = $segment->{id};
+
+  my @ret;
+  eval {
+    if ($wantarray)
     {
-        $enabled = $AWS::XRay::ENABLED ? 1 : 0;  # fix true or false (not undef)
+      @ret = $code->($segment);
     }
-    elsif ($AWS::XRay::TRACE_ID)
+    elsif (defined $wantarray)
     {
-        $enabled = 0;                            # called from parent capture
+      $ret[0] = $code->($segment);
     }
     else
     {
-        # root capture try sampling
-        $sampled = $AWS::XRay::SAMPLER->() ? 1 : 0;
-        $enabled = $sampled                ? 1 : 0;
+      $code->($segment);
     }
-    $AWS::XRay::ENABLED = $enabled;
-    $AWS::XRay::SAMPLED = $sampled;
-
-    return $code->(AWS::XRay::Segment->new) if !$enabled;
-
-    $AWS::XRay::TRACE_ID = $AWS::XRay::TRACE_ID // AWS::XRay::new_trace_id();
-
-    my $segment = AWS::XRay::Segment->new({ name => $name });
-    unless (defined $segment->{type} && $segment->{type} eq "subsegment")
-    {
-        $_->apply_plugin($segment) for @AWS::XRay::PLUGINS;
-    }
-
-    $AWS::XRay::SEGMENT_ID = $segment->{id};
-
-    my @ret;
-    eval {
-        if ($wantarray)
+  };
+  my $error = $@;
+  if ($error)
+  {
+    $segment->{error} = Types::Serialiser::true;
+    $segment->{cause} = {
+      exceptions => [
         {
-            @ret = $code->($segment);
-        }
-        elsif (defined $wantarray)
-        {
-            $ret[0] = $code->($segment);
-        }
-        else
-        {
-            $code->($segment);
-        }
+          id      => AWS::XRay::new_id(),
+          message => "$error",
+          remote  => Types::Serialiser::true,
+        },
+      ],
     };
-    my $error = $@;
-    if ($error)
-    {
-        $segment->{error} = Types::Serialiser::true;
-        $segment->{cause} = {
-            exceptions => [
-                {
-                    id      => AWS::XRay::new_id(),
-                    message => "$error",
-                    remote  => Types::Serialiser::true,
-                },
-            ],
-        };
-    }
-    die $error if $error;
-    return $wantarray ? @ret : $ret[0];
+  }
+  die $error if $error;
+  return $wantarray ? @ret : $ret[0];
 }
 
