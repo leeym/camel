@@ -29,6 +29,9 @@ AWS::XRay->auto_flush(0);
 my $start   = time();
 my $dtstamp = Date::ICal->new(epoch => $start)->ical;
 my $loop    = IO::Async::Loop->new();
+
+# Start a fresh Perl process so macOS DNS runs after exec.
+$loop->resolver->configure(model => 'spawn') if $^O eq 'darwin';
 my $calname;
 my %SEGMENT;
 my %VEVENT;

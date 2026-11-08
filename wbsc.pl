@@ -23,6 +23,9 @@ AWS::XRay->auto_flush(0);
 my $start   = time;
 my $dtstamp = Date::ICal->new(epoch => $start)->ical;
 my $loop    = new IO::Async::Loop;
+
+# Start a fresh Perl process so macOS DNS runs after exec.
+$loop->resolver->configure(model => 'spawn') if $^O eq 'darwin';
 my $ics = Data::ICal->new(calname => 'World Baseball Softball Confederation');
 my %SEGMENT;
 my %VEVENT;
@@ -48,6 +51,7 @@ for my $vevent (sort by_dtstart values %VEVENT)
     $ics->add_entry($vevent);
 }
 $ics->add_entry(last_modified_event());
+binmode STDOUT, ':encoding(UTF-8)';
 print $ics->as_string;
 
 END

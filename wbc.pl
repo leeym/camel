@@ -25,8 +25,11 @@ AWS::XRay->auto_flush(0);
 my $start   = time();
 my $dtstamp = Date::ICal->new(epoch => $start)->ical;
 my $loop    = new IO::Async::Loop;
-my $ics     = Data::ICal->new(calname => 'World Baseball Classic');
-my @YEAR    = (2006, 2009, 2012, 2013, 2017, 2023, 2025, 2026);
+
+# Start a fresh Perl process so macOS DNS runs after exec.
+$loop->resolver->configure(model => 'spawn') if $^O eq 'darwin';
+my $ics  = Data::ICal->new(calname => 'World Baseball Classic');
+my @YEAR = (2006, 2009, 2012, 2013, 2017, 2023, 2025, 2026);
 my %SEGMENT;
 my %VEVENT;
 my @FUTURE;

@@ -26,6 +26,9 @@ my $start   = time();
 my $dtstamp = Date::ICal->new(epoch   => $start)->ical;
 my $ics     = Data::ICal->new(calname => 'Olympic Games');
 my $loop    = IO::Async::Loop->new();
+
+# Start a fresh Perl process so macOS DNS runs after exec.
+$loop->resolver->configure(model => 'spawn') if $^O eq 'darwin';
 my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
