@@ -31,11 +31,40 @@ my $loop    = new IO::Async::Loop;
 # Start a fresh Perl process so macOS DNS runs after exec.
 $loop->resolver->configure(model => 'spawn') if $^O eq 'darwin';
 my $ics = Data::ICal->new(calname => 'Asia Professional Baseball Championship');
+$ENV{TZ} = 'Asia/Tokyo';
+tzset();
+
 my %SEGMENT;
 my %VEVENT;
 my @FUTURE;
 
-my $url = 'https://www.japan-baseball.jp/jp/games/apbc2026/';
+my $base_url = 'https://www.japan-baseball.jp/jp/games';
+
+# Completed Taiwan games from the official tournament schedules.
+# Japan local time, home team and runs, then visiting team and runs.
+my @historical_games = (
+    [2017, 11, 17, 19, 0,  'KOR', 1, 'TPE', 0, ''],
+    [2017, 11, 18, 18, 30, 'TPE', 2, 'JPN', 8, ''],
+    [2023, 11, 16, 19, 0,  'TPE', 0, 'JPN', 4, ''],
+    [2023, 11, 17, 12, 0,  'AUS', 0, 'TPE', 6, ''],
+    [2023, 11, 18, 19, 0,  'KOR', 6, 'TPE', 1, ''],
+    [2023, 11, 19, 11, 0,  'TPE', 4, 'AUS', 3, '3位決定戦'],
+);
+
+for my $row (@historical_games)
+{
+    my (
+        $year, $month,     $day,  $hour,      $min,
+        $home, $home_runs, $away, $away_runs, $label
+    ) = @$row;
+    add_game(
+        $year,  $month, $day,  $hour,
+        $min,   $home,  $away, "$away_runs:$home_runs",
+        $label, "$base_url/apbc$year/"
+    );
+}
+
+my $url = "$base_url/apbc2026/";
 captured($ENV{_X_AMZN_TRACE_ID}, $url, sub { schedule($url) });
 
 for my $future (@FUTURE)
@@ -78,8 +107,6 @@ sub schedule
             my $section = $1
               if $html =~ m{<section[^>]*id="schedule"[^>]*>(.*?)</section>}s;
             return if !$year || !$section;
-            $ENV{TZ} = 'Asia/Tokyo';
-            tzset();
             my ($month, $day);
 
             for my $chunk (
@@ -104,43 +131,45 @@ sub schedule
                     next;
                 }
                 next if !grep { m{^(TPE|TBD)$} } $home, $away;
-                $home = name($home);
-                $away = name($away);
-                my $epoch =
-                  mktime(1, $min, $hour, $day, $month - 1, $year - 1900);
                 my $score = 'vs';
                 $score = "$2:$1" if trimmed($num) =~ m{(\d+)\D+(\d+)};
-                $score = 'vs'    if $epoch > time;
-                my $game = game($label);
-                my $summary =
-                  sprintf(
-"%s %s %s | Asia Professional Baseball Championship %s - %s",
-                    $away, $score, $home, $year, $game);
-                my $when = sprintf('%04d-%02d-%02d %02d:%02d',
-                    $year, $month, $day, $hour, $min);
-                warn "$when ($ENV{TZ}) $summary\n";
-                my $uid = sprintf('apbc-%04d%02d%02d-%02d%02d',
-                    $year, $month, $day, $hour, $min);
-                my $link = $url . '#schedule';
-                my %LI;
-                $LI{Schedule} = $link;
-                my $vevent = Data::ICal::Entry::Event->new();
-                $vevent->add_properties(
-                    description => unordered(%LI),
-                    dtstart     => Date::ICal->new(epoch => $epoch)->ical,
-                    duration    => 'PT3H0M',
-                    dtstamp     => $dtstamp,
-                    location    =>
-                      'Tokyo Dome, 1-3-61 Koraku, Bunkyo-ku, Tokyo, Japan',
-                    summary => $summary,
-                    uid     => $uid,
-                    url     => $link,
+                add_game(
+                    $year,  $month, $day,  $hour,
+                    $min,   $home,  $away, $score,
+                    $label, $url . '#schedule'
                 );
-                $VEVENT{$uid} = $vevent;
             }
         }
     );
     push(@FUTURE, $future);
+}
+
+sub add_game
+{
+    my ($year, $month, $day, $hour, $min, $home, $away, $score, $label, $link) =
+        @_;
+    my $epoch = mktime(1, $min, $hour, $day, $month - 1, $year - 1900);
+    $score = 'vs' if $epoch > time;
+    my $summary =
+        sprintf("%s %s %s | Asia Professional Baseball Championship %s - %s",
+        name($away), $score, name($home), $year, game($label));
+    my $when =
+        sprintf('%04d-%02d-%02d %02d:%02d', $year, $month, $day, $hour, $min);
+    warn "$when ($ENV{TZ}) $summary\n";
+    my $uid =
+        sprintf('apbc-%04d%02d%02d-%02d%02d', $year, $month, $day, $hour, $min);
+    my $vevent = Data::ICal::Entry::Event->new();
+    $vevent->add_properties(
+        description => unordered(Schedule => $link),
+        dtstart     => Date::ICal->new(epoch => $epoch)->ical,
+        duration    => 'PT3H0M',
+        dtstamp     => $dtstamp,
+        location    => 'Tokyo Dome, 1-3-61 Koraku, Bunkyo-ku, Tokyo, Japan',
+        summary     => $summary,
+        uid         => $uid,
+        url         => $link,
+    );
+    $VEVENT{$uid} = $vevent;
 }
 
 sub team
